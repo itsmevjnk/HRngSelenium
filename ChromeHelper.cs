@@ -14,6 +14,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Newtonsoft.Json;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
 
 namespace HRngBackend
 {
@@ -426,6 +428,47 @@ namespace HRngBackend
                 await DownloadRelease(driver); // Download and extract new one
             }
             return 0;
+        }
+
+        /*
+         * public IWebDriver InitializeSelenium([bool no_console], [bool verbose], [bool no_log], [bool headless], [bool no_img])
+         *   Initializes Selenium using the Chrome/Chromium and ChromeDriver
+         *   binaries in ChromePath and ChromeDriverPath.
+         *   Input : no_console: Whether to disable showing the console window
+         *                       for ChromeDriver (optional). Set to true by
+         *                       default.
+         *           verbose   : Whether to enable verbose logging (optional).
+         *                       Set to false by default.
+         *           no_log    : Whether to disable saving ChromeDriver's logs
+         *                       to files (optional). Set to false by default.
+         *                       ChromeDriver logs can be found in PlatformBase
+         *                       as crdrv_(timestamp).log.
+         *           headless  : Whether to start Chrome/Chromium in headless
+         *                       mode (i.e. no GUI). Set to true by default.
+         *           no_img    : Whether to disable images loading. Set to true
+         *                       by default. Please note that enabling images
+         *                       loading will result in higher unnecessary data
+         *                       usage and longer loading time.
+         *   Output: An IWebDriver instance from Selenium.
+         */
+        public IWebDriver InitializeSelenium(bool no_console = true, bool verbose = false, bool no_log = false, bool headless = true, bool no_img = true)
+        {
+            ChromeDriverService driver = ChromeDriverService.CreateDefaultService(Path.GetDirectoryName(ChromeDriverPath), Path.GetFileName(ChromeDriverPath));
+            driver.EnableVerboseLogging = verbose;
+            driver.HideCommandPromptWindow = no_console;
+            if (!no_log) driver.LogPath = Path.Combine(Path.GetDirectoryName(ChromeDriverPath), $"crdrv_{DateTime.Now.ToString("ddMMyyyyHHmmss")}.log");
+            ChromeOptions browser = new ChromeOptions();
+            browser.BinaryLocation = ChromePath;
+            if(headless)
+            {
+                browser.AddArgument("--headless");
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) browser.AddArgument("--disable-gpu"); // According to Google this is "temporary" for Windows back in 2017, but looks like we still need it in 2021 :/
+            }
+            if(no_img)
+            {
+                browser.AddUserProfilePreference("profile.managed_default_content_settings", new Dictionary<string, object> { { "images", 2 } });
+            }
+            return new ChromeDriver(driver, browser);
         }
     }
 }
