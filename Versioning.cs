@@ -13,7 +13,7 @@ using System.IO;
 
 namespace HRngBackend
 {
-    public static class Versioning
+    internal static class Versioning
     {
         /*
          * public int GetVersion(string version, int idx)

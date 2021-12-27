@@ -51,9 +51,6 @@ namespace HRngBackend
             {
                 if (consent != null && !consent()) return false;
 
-                HttpClient client = new HttpClient();
-                client.DefaultRequestHeaders.Add("User-Agent", UserAgent.Next());
-
                 string url = "https://github.com/develar/7zip-bin/raw/master/";
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) url += "win/";
@@ -73,7 +70,7 @@ namespace HRngBackend
                 url += "7za";
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) url += ".exe";
 
-                var resp = await client.GetAsync(url);
+                var resp = await CommonHTTP.Client.GetAsync(url);
                 resp.EnsureSuccessStatusCode();
                 using (var fs = new FileStream(BinaryPath, FileMode.CreateNew)) await resp.Content.CopyToAsync(fs);
             }

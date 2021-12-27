@@ -51,9 +51,7 @@ namespace HRngBackend
          */
         public async Task Download(string destination)
         {
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", UserAgent.Next()); // Without this GitHub will not be happy
-            var resp = await client.GetAsync(DownloadURL);
+            var resp = await CommonHTTP.Client.GetAsync(DownloadURL);
             resp.EnsureSuccessStatusCode();
             using (var fs = new FileStream(destination, FileMode.Open)) await resp.Content.CopyToAsync(fs);
         }

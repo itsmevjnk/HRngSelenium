@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Net.Http;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -68,7 +67,7 @@ namespace HRngBackend
         {
             ChromeDriverPath = Path.Combine(BaseDir.PlatformBase, "chromedriver");
 
-            HTTPClient.DefaultRequestHeaders.Add("User-Agent", UserAgent.Next()); // We have to do this so that GitHub is happy
+            CommonHTTP.Client.DefaultRequestHeaders.Add("User-Agent", UserAgent.Next()); // We have to do this so that GitHub is happy
 
             /* Attempt to find existing Google Chrome installation */
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -202,13 +201,6 @@ namespace HRngBackend
         }
 
         /*
-         * private static HttpClient HTTPClient
-         *   Private HTTP client instance for getting versions and downloading
-         *   files.
-         */
-        private static HttpClient HTTPClient = new HttpClient();
-
-        /*
          * public async Task<Release> LatestRelease()
          *   Retrieves the latest (stable) release of Chromium available for
          *   the running platform.
@@ -231,7 +223,7 @@ namespace HRngBackend
                         /* TODO: Add ARM64 */
                         default: throw new InvalidOperationException($"Chromium for Windows is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})");
                     }
-                    var resp = await HTTPClient.GetAsync($"https://api.github.com/repos/{repo}/releases/latest");
+                    var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/{repo}/releases/latest");
                     resp.EnsureSuccessStatusCode();
                     dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
                     string tag = ((string)release_json.html_url).Split('/').Last();
@@ -242,7 +234,7 @@ namespace HRngBackend
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new InvalidOperationException($"Chromium for macOS is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
-                    var resp = await HTTPClient.GetAsync($"https://api.github.com/repos/macchrome/macstable/releases/latest");
+                    var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/macchrome/macstable/releases/latest");
                     resp.EnsureSuccessStatusCode();
                     dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
                     string tag = ((string)release_json.html_url).Split('/').Last();
@@ -253,7 +245,7 @@ namespace HRngBackend
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new InvalidOperationException($"Chromium for Linux is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
-                    var resp = await HTTPClient.GetAsync($"https://api.github.com/repos/macchrome/linchrome/releases/latest");
+                    var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/macchrome/linchrome/releases/latest");
                     resp.EnsureSuccessStatusCode();
                     dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
                     string tag = ((string)release_json.html_url).Split('/').Last();
@@ -312,7 +304,7 @@ namespace HRngBackend
                 }
                 else
                 {
-                    var resp_ver = await HTTPClient.GetAsync($"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{major}.{minor}.{build}");
+                    var resp_ver = await CommonHTTP.Client.GetAsync($"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{major}.{minor}.{build}");
                     resp_ver.EnsureSuccessStatusCode();
                     cdver = (await resp_ver.Content.ReadAsStringAsync()).Trim();
                 }
@@ -328,7 +320,7 @@ namespace HRngBackend
             };
 
                 /* Check if the request is successful, i.e. the file exists */
-                var resp = await HTTPClient.GetAsync($"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip");
+                var resp = await CommonHTTP.Client.GetAsync($"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip");
                 resp.EnsureSuccessStatusCode();
 
                 Release release = new Release();
