@@ -4,17 +4,16 @@
  * Author    : itsmevjnk
  */
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Text.RegularExpressions;
-
 using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace HRngBackend
 {
@@ -251,9 +250,9 @@ namespace HRngBackend
                     string tag = ((string)release_json.html_url).Split('/').Last();
                     release.Version = Regex.Replace(tag.Replace("v", ""), "-r.*", "");
                     release.ChangelogURL = release_json.html_url;
-                    foreach(var asset in release_json.assets)
+                    foreach (var asset in release_json.assets)
                     {
-                        if(((string)asset.name).EndsWith(".tar.xz"))
+                        if (((string)asset.name).EndsWith(".tar.xz"))
                         {
                             release.DownloadURL = asset.browser_download_url;
                             break;
@@ -263,7 +262,8 @@ namespace HRngBackend
                 else throw new InvalidOperationException("Chromium is not available for this operating system");
                 if (release.Update != 2 && !ChromeInst && Versioning.CompareVersion(release.Version, LocalVersion()) > 0) release.Update = 1;
                 return release;
-            } catch
+            }
+            catch
             {
                 return null;
             }
@@ -330,7 +330,8 @@ namespace HRngBackend
                 if (!File.Exists(ChromeDriverPath) || Versioning.CompareVersion(release.Version, LocalDriverVersion(), 2) != 0) release.Update = 2; // Force update if ChromeDriver does not exist or there's a version mismatch
 
                 return release;
-            } catch
+            }
+            catch
             {
                 return null;
             }
@@ -382,7 +383,7 @@ namespace HRngBackend
          */
         public async Task<int> Update(Func<Release, bool>? consent = null, Release? release = null)
         {
-            if(!ChromeInst)
+            if (!ChromeInst)
             {
                 /* We can update Chromium */
                 Release remote; // The Chromium version we aim to update to
@@ -393,7 +394,7 @@ namespace HRngBackend
                     remote.Update = 2; // Force this version
                 }
                 else remote = await LatestRelease(); // Get latest Chromium version
-                if(remote.Update != 0 && consent != null)
+                if (remote.Update != 0 && consent != null)
                 {
                     bool consent_ret = consent(remote); // Prompt for consent
                     if (!consent_ret)
@@ -451,12 +452,12 @@ namespace HRngBackend
             if (!no_log) driver.LogPath = Path.Combine(Path.GetDirectoryName(ChromeDriverPath), $"crdrv_{DateTime.Now.ToString("ddMMyyyyHHmmss")}.log");
             ChromeOptions browser = new ChromeOptions();
             browser.BinaryLocation = ChromePath;
-            if(headless)
+            if (headless)
             {
                 browser.AddArgument("--headless");
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) browser.AddArgument("--disable-gpu"); // According to Google this is "temporary" for Windows back in 2017, but looks like we still need it in 2021 :/
             }
-            if(no_img)
+            if (no_img)
             {
                 browser.AddUserProfilePreference("profile.managed_default_content_settings", new Dictionary<string, object> { { "images", 2 } });
             }

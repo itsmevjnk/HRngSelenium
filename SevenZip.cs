@@ -6,11 +6,10 @@
  */
 
 using System;
-using System.IO;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using System.Net.Http;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace HRngBackend
 {
@@ -127,11 +126,11 @@ namespace HRngBackend
                 proc7z.StartInfo.RedirectStandardInput = true; // Crucial for our piping operation
 
                 proc7z_pre.Start(); proc7z.Start(); // Start both processes
-                using(StreamReader instream = proc7z_pre.StandardOutput)
+                using (StreamReader instream = proc7z_pre.StandardOutput)
                 {
-                    using(StreamWriter outstream = proc7z.StandardInput)
+                    using (StreamWriter outstream = proc7z.StandardInput)
                     {
-                        while(true)
+                        while (true)
                         {
                             int b = instream.Read();
                             if (b == -1) break; // End of input stream

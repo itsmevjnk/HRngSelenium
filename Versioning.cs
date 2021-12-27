@@ -5,11 +5,11 @@
  */
 
 using System;
-using System.Linq;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.IO;
 
 namespace HRngBackend
 {
@@ -54,7 +54,7 @@ namespace HRngBackend
          */
         public static int CompareVersion(string a, string b, int max_idx = -1)
         {
-            for(int i = 0; (max_idx < 0 || i <= max_idx); i++)
+            for (int i = 0; (max_idx < 0 || i <= max_idx); i++)
             {
                 int ai = GetVersion(a, i), bi = GetVersion(b, i); // Version at index i
                 if (ai == -1 || bi == -1) return 0; // We've hit the end of one of the version strings, and so far we're still going, which means the two versions are identical
@@ -80,7 +80,7 @@ namespace HRngBackend
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 FileVersionInfo version = FileVersionInfo.GetVersionInfo(path);
-                if(version.ProductVersion != null) return version.ProductVersion;
+                if (version.ProductVersion != null) return version.ProductVersion;
             }
             Process process = new Process();
             process.StartInfo.UseShellExecute = false;
@@ -90,7 +90,7 @@ namespace HRngBackend
             process.Start();
             string[] output = process.StandardOutput.ReadToEnd().Trim().Split(' ');
             process.WaitForExit();
-            return Regex.Replace((idx == null) ? output.Last() : output[(int) idx], "[a-zA-Z]", "");
+            return Regex.Replace((idx == null) ? output.Last() : output[(int)idx], "[a-zA-Z]", "");
         }
     }
 }
