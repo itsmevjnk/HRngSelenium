@@ -74,6 +74,17 @@ namespace HRngBackend
                 using (var fs = new FileStream(BinaryPath, FileMode.CreateNew)) await resp.Content.CopyToAsync(fs);
             }
 
+            /* Make sure that 7za is executable (Linux/Unix only) */
+            Process chmod = new Process();
+            chmod.StartInfo.FileName = "chmod";
+            chmod.StartInfo.Arguments = $"+x {BinaryPath}";
+            chmod.StartInfo.UseShellExecute = false;
+            chmod.StartInfo.RedirectStandardOutput = true;
+            chmod.StartInfo.CreateNoWindow = true;
+            chmod.Start();
+            chmod.StandardOutput.ReadToEnd();
+            chmod.WaitForExit();
+
             return true;
         }
 
