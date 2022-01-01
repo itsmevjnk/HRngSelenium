@@ -342,8 +342,11 @@ namespace HRngBackend
                         {
                             /* Embedded content */
                             var elem_embed = elem_comment.SelectSingleNode("./div[2]");
-                            try { comment.StickerURL = Driver.FindElement(By.XPath($"//div[@data-sigil='comment inline-reply' or @data-sigil='comment'][{n + 1}]/div[contains(@data-sigil, 'feed_story_ring')]/following-sibling::div[1]/div[2]/i[contains(@style, 'background-image')]")).GetCssValue("background-image").Replace("url(", "").Replace(")", "").Replace("\"", "").Replace("'", ""); }
-                            catch (NoSuchElementException) { }
+                            if (elem_embed.SelectSingleNode("./i[contains(@style, 'background-image')]") != null)
+                            {
+                                try { comment.StickerURL = Driver.FindElement(By.XPath($"//div[@data-sigil='comment inline-reply' or @data-sigil='comment'][{n + 1}]/div[contains(@data-sigil, 'feed_story_ring')]/following-sibling::div[1]/div[2]/i[contains(@style, 'background-image')]")).GetCssValue("background-image").Replace("url(", "").Replace(")", "").Replace("\"", "").Replace("'", ""); }
+                                catch (NoSuchElementException) { }
+                            }
                             var elem_embed2 = elem_embed;
                             if (!elem_embed2.Attributes.Contains("title")) elem_embed2 = elem_embed.SelectSingleNode("./div[@title]");
                             if (elem_embed2 != null && elem_embed2.Attributes.Contains("title"))
@@ -447,15 +450,18 @@ namespace HRngBackend
                     long uid = -1;
                     /* From shown user ID list */
                     if (n < shown_users.Count) uid = shown_users[n];
-                    /* From page like button */
+                    /* From message button */
                     if (uid == -1)
                     {
-                        var elem_data_store = elem.SelectSingleNode(".//div[contains(@data-store, 'pageID')]");
-                        if (elem_data_store != null)
+                        try
                         {
-                            dynamic data_store = JsonConvert.DeserializeObject(elem_data_store.Attributes["data-store"].DeEntitizeValue);
-                            uid = data_store.pageID;
+                            string current_url = Driver.Url; // Just being on the safe side here
+                            Driver.FindElement(By.XPath($"//div[@id='reaction_profile_browser']/div[{n + 1}]//button")).Click();
+                            while (Driver.Url == current_url) Thread.Sleep(10); // Wait until browser URL changes (which is when we can begin to do our magic)
+                            uid = Convert.ToInt64(HttpUtility.ParseQueryString(Regex.Replace(HttpUtility.ParseQueryString(Driver.Url.Split('/').Last()).Get("mds"), "(?<=[&?]ids).*(?==)", "")).Get("ids"));
+                            Driver.Navigate().Back(); // Go back to previous page
                         }
+                        catch (NoSuchElementException) { }
                     }
                     /* From add friend button */
                     if (uid == -1)
@@ -477,18 +483,15 @@ namespace HRngBackend
                             uid = data_store.subject_id;
                         }
                     }
-                    /* From message button */
+                    /* From page like button */
                     if (uid == -1)
                     {
-                        try
+                        var elem_data_store = elem.SelectSingleNode(".//div[contains(@data-store, 'pageID')]");
+                        if (elem_data_store != null)
                         {
-                            string current_url = Driver.Url; // Just being on the safe side here
-                            Driver.FindElement(By.XPath($"//div[@id='reaction_profile_browser']/div[{n + 1}]//button")).Click();
-                            while (Driver.Url == current_url) Thread.Sleep(10); // Wait until browser URL changes (which is when we can begin to do our magic)
-                            uid = Convert.ToInt64(HttpUtility.ParseQueryString(Regex.Replace(HttpUtility.ParseQueryString(Driver.Url.Split('/').Last()).Get("mds"), "(?<=[&?]ids).*(?==)", "")).Get("ids"));
-                            Driver.Navigate().Back(); // Go back to previous page
+                            dynamic data_store = JsonConvert.DeserializeObject(elem_data_store.Attributes["data-store"].DeEntitizeValue);
+                            uid = data_store.pageID;
                         }
-                        catch (NoSuchElementException) { }
                     }
                     /* Use UID lookup services */
                     if (uid == -1) uid = await UID.Get(link);
@@ -547,22 +550,12 @@ namespace HRngBackend
                     string link = elem.SelectSingleNode("./div[1]/div[1]/a").Attributes["href"].DeEntitizeValue;
                     long uid = -1;
                     /* These methods turn out to be working with shares too */
-                    /* From page like button */
-                    var elem_data_store = elem.SelectSingleNode(".//div[contains(@data-store, 'pageID')]");
+                    /* From add friend button */
+                    var elem_data_store = elem.SelectSingleNode(".//a[contains(@data-store, 'id')]");
                     if (elem_data_store != null)
                     {
                         dynamic data_store = JsonConvert.DeserializeObject(elem_data_store.Attributes["data-store"].DeEntitizeValue);
-                        uid = data_store.pageID;
-                    }
-                    /* From add friend button */
-                    if (uid == -1)
-                    {
-                        elem_data_store = elem.SelectSingleNode(".//a[contains(@data-store, 'id')]");
-                        if (elem_data_store != null)
-                        {
-                            dynamic data_store = JsonConvert.DeserializeObject(elem_data_store.Attributes["data-store"].DeEntitizeValue);
-                            uid = data_store.id;
-                        }
+                        uid = data_store.id;
                     }
                     /* From follow button */
                     if (uid == -1)
@@ -572,6 +565,16 @@ namespace HRngBackend
                         {
                             dynamic data_store = JsonConvert.DeserializeObject(elem_data_store.Attributes["data-store"].DeEntitizeValue);
                             uid = data_store.subject_id;
+                        }
+                    }
+                    /* From page like button */
+                    if (uid == -1)
+                    {
+                        elem_data_store = elem.SelectSingleNode(".//div[contains(@data-store, 'pageID')]");
+                        if (elem_data_store != null)
+                        {
+                            dynamic data_store = JsonConvert.DeserializeObject(elem_data_store.Attributes["data-store"].DeEntitizeValue);
+                            uid = data_store.pageID;
                         }
                     }
                     /* Message button is not present so we can ignore it */
