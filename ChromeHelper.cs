@@ -252,7 +252,7 @@ namespace HRngBackend
                     release.ChangelogURL = release_json.html_url;
                     foreach (var asset in release_json.assets)
                     {
-                        if (((string)asset.name).EndsWith(".tar.xz"))
+                        if (((string)asset.name).EndsWith(".AppImage"))
                         {
                             release.DownloadURL = asset.browser_download_url;
                             break;
@@ -394,22 +394,51 @@ namespace HRngBackend
                     remote.Update = 2; // Force this version
                 }
                 else remote = await LatestRelease(); // Get latest Chromium version
-                if (remote.Update != 0 && consent != null)
+                if (remote.Update != 0)
                 {
-                    bool consent_ret = consent(remote); // Prompt for consent
-                    if (!consent_ret)
+                    if (consent != null)
                     {
-                        if (remote.Update == 2) return -1; // Forced update refused
-                        else goto UpdateDriver;
+                        bool consent_ret = consent(remote); // Prompt for consent
+                        if (!consent_ret)
+                        {
+                            if (remote.Update == 2) return -1; // Forced update refused
+                            else goto UpdateDriver;
+                        }
                     }
                     /* Download Chromium to replace old release */
                     if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
-                    await remote.Download(TempFile); // We'll implement our own download-and-extract code since there are many ways the contents inside the archive is contained
-                    string[] files = new string[1]; // List of files to provide to 7za for extracting
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) files[0] = "Chrome-bin/*"; // Hibbiki puts their Chromium binaries in Chrome-bin/
-                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) files[0] = remote.DownloadURL.Split("/").Last().Replace(".tar.xz", "") + "/*"; // Marmaduke puts their Linux Chromium binaries in a directory with the same name as the file
-                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) files[0] = ""; // Surprisingly, there's nothing much to Marmaduke's macOS Chromium builds
-                    await SevenZip.Extract(TempFile, Path.Combine(BaseDir.PlatformBase, "chrome"), files, atomic: RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        /* With Linux we'll be using AppImage which can actually extract itself */
+                        string appimg_file = Path.Combine(BaseDir.PlatformBase, "chromium.AppImage");
+                        await remote.Download(appimg_file);
+                        System.Diagnostics.Process process = new System.Diagnostics.Process();
+                        process.StartInfo.FileName = "chmod";
+                        process.StartInfo.Arguments = $"+x {appimg_file}";
+                        process.StartInfo.UseShellExecute = false;
+                        process.StartInfo.RedirectStandardOutput = true;
+                        process.StartInfo.CreateNoWindow = true;
+                        process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
+                        process = new System.Diagnostics.Process();
+                        process.StartInfo.FileName = appimg_file;
+                        process.StartInfo.WorkingDirectory = BaseDir.PlatformBase;
+                        process.StartInfo.Arguments = "--appimage-extract opt/google/chrome/*";
+                        process.StartInfo.UseShellExecute = false;
+                        process.StartInfo.RedirectStandardOutput = true;
+                        process.StartInfo.CreateNoWindow = true;
+                        process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
+                        Directory.Move(Path.Combine(new string[]{ BaseDir.PlatformBase, "squashfs-root", "opt", "google", "chrome" }), Path.Combine(BaseDir.PlatformBase, "chrome"));
+                        Directory.Delete(Path.Combine(BaseDir.PlatformBase, "squashfs-root"), true);
+                        File.Delete(appimg_file);
+                    }
+                    else
+                    {
+                        await remote.Download(TempFile); // We'll implement our own download-and-extract code since there are many ways the contents inside the archive is contained
+                        string[] files = new string[1]; // List of files to provide to 7za for extracting
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) files[0] = "Chrome-bin/*"; // Hibbiki puts their Chromium binaries in Chrome-bin/
+                        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) files[0] = ""; // Surprisingly, there's nothing much to Marmaduke's macOS Chromium builds
+                        await SevenZip.Extract(TempFile, Path.Combine(BaseDir.PlatformBase, "chrome"), files);
+                    }
                 }
             }
 

@@ -52,7 +52,7 @@ namespace HRngBackend
         {
             var resp = await CommonHTTP.Client.GetAsync(DownloadURL);
             resp.EnsureSuccessStatusCode();
-            using (var fs = new FileStream(destination, FileMode.Open)) await resp.Content.CopyToAsync(fs);
+            using (var fs = new FileStream(destination, FileMode.OpenOrCreate)) await resp.Content.CopyToAsync(fs);
         }
     }
 }

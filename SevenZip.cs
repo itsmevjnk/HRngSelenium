@@ -93,7 +93,7 @@ namespace HRngBackend
 
         /*
          * public static async Task<int> Extract(string archive, [string? output_dir],
-         *                                [string[] files], [bool overwrite], [bool atomic])
+         *                                [string[] files], [bool overwrite])
          *   Extracts an archive using 7za.
          *   Input : archive   : The archive to be extracted.
          *           output_dir: The directory to extract to (optional).
@@ -103,18 +103,16 @@ namespace HRngBackend
          *           overwrite : Whether 7za can overwrite existing files
          *                       (optional). If this argument is not specified,
          *                       7za will overwrite existing files.
-         *           atomic    : This option pipes 7za's extract output to another
-         *                       7za instance for **actually** extracting the archive.
-         *                       Used for tar.gz/xz/lz formats.
          *   Output: -999 if the 7za binary does not exist, or the return value
          *           from 7za.
          */
-        public static async Task<int> Extract(string archive, string? output_dir = null, string[]? files = null, bool overwrite = true, bool atomic = false)
+        public static async Task<int> Extract(string archive, string? output_dir = null, string[]? files = null, bool overwrite = true)
         {
             files = files ?? new string[0];
             if (BinaryPath == "" || !File.Exists(BinaryPath)) return -999; // 7za does not exist
             Process proc7z = new Process();
             proc7z.StartInfo.FileName = BinaryPath;
+            proc7z.StartInfo.WorkingDirectory = BaseDir.PlatformBase;
             proc7z.StartInfo.UseShellExecute = false;
             proc7z.StartInfo.RedirectStandardOutput = true;
             proc7z.StartInfo.CreateNoWindow = true;
@@ -123,37 +121,10 @@ namespace HRngBackend
             proc7z.StartInfo.Arguments = "e";
             if (overwrite) proc7z.StartInfo.Arguments += " -y";
             if (output_dir != null && output_dir != "") proc7z.StartInfo.Arguments += $" -o\"{output_dir}\"";
-            if (!atomic) proc7z.StartInfo.Arguments += $" \"{archive}\"";
-            else proc7z.StartInfo.Arguments += " -si -ttar"; // Take input from stdin, and treat it as TAR (which it is)
+            proc7z.StartInfo.Arguments += $" \"{archive}\"";
             foreach (string file in files) proc7z.StartInfo.Arguments += $" {file}";
 
-            if (!atomic) proc7z.Start();
-            else
-            {
-                /* Set up preprocessing 7za process */
-                Process proc7z_pre = new Process();
-                proc7z_pre.StartInfo.FileName = BinaryPath;
-                proc7z_pre.StartInfo.UseShellExecute = false;
-                proc7z_pre.StartInfo.RedirectStandardOutput = true;
-                proc7z_pre.StartInfo.CreateNoWindow = true;
-                proc7z_pre.StartInfo.Arguments = $"x \"{archive}\" -so"; // Extract and pipe output to stdout
-                proc7z.StartInfo.RedirectStandardInput = true; // Crucial for our piping operation
-
-                proc7z_pre.Start(); proc7z.Start(); // Start both processes
-                using (StreamReader instream = proc7z_pre.StandardOutput)
-                {
-                    using (StreamWriter outstream = proc7z.StandardInput)
-                    {
-                        while (true)
-                        {
-                            int b = instream.Read();
-                            if (b == -1) break; // End of input stream
-                            outstream.Write(new byte[] { (byte)b }); // Write byte to output stream
-                        }
-                        instream.Close(); outstream.Close(); // Finish piping
-                    }
-                }
-            }
+            proc7z.Start();
             await proc7z.StandardOutput.ReadToEndAsync();
             proc7z.WaitForExit();
 
