@@ -260,17 +260,21 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, FBComment>> GetComments([Func<int, int, int> cb])
+         * public async Task<IDictionary<long, FBComment>> GetComments([Func<int, int, int> cb],
+         *                                                             [bool muid])
          *   Scrape all comments from the Facebook post.
-         *   Input : cb: Callback function to be called when each
-         *               comment has been saved (optional).
-         *               This function takes 2 arguments, the first one
-         *               being the number of comments fetched, and the
-         *               second one being the total number of comments,
-         *               and returns an int value that is ignored.
+         *   Input : cb  : Callback function to be called when each
+         *                 comment has been saved (optional).
+         *                 This function takes 2 arguments, the first one
+         *                 being the number of comments fetched, and the
+         *                 second one being the total number of comments,
+         *                 and returns an int value that is ignored.
+         *           muid: Whether to retrieve UIDs of accounts mentioned
+         *                 in the comments (optional). Disabled by default
+         *                 for speed improvements.
          *   Output: a comment ID => FBComment instance dictionary.
          */
-        public async Task<IDictionary<long, FBComment>> GetComments(Func<int, int, int>? cb = null)
+        public async Task<IDictionary<long, FBComment>> GetComments(Func<int, int, int>? cb = null, bool muid = false)
         {
             IDictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
 
@@ -334,7 +338,11 @@ namespace HRngBackend
                                 foreach (var elem_mention in elem_mentions)
                                 {
                                     string url = elem_mention.Attributes["href"].DeEntitizeValue;
-                                    if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "") comment.Mentions.Add(await UID.Get(url));
+                                    if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "")
+                                    {
+                                        comment.Mentions_Handle.Add(UID.GetHandle(url));
+                                        if (muid) comment.Mentions_UID.Add(await UID.Get(url));
+                                    }
                                 }
                             }
                         }
