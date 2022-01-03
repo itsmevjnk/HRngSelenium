@@ -270,11 +270,12 @@ namespace HRngBackend
          *                 second one being the total number of comments,
          *                 and returns an int value that is ignored.
          *           muid: Whether to retrieve UIDs of accounts mentioned
-         *                 in the comments (optional). Disabled by default
-         *                 for speed improvements.
+         *                 in the comments (optional). Enabled by default,
+         *                 however, this can be disabled for speed
+         *                 improvements if this data is unnecessary.
          *   Output: a comment ID => FBComment instance dictionary.
          */
-        public async Task<IDictionary<long, FBComment>> GetComments(Func<int, int, int>? cb = null, bool muid = false)
+        public async Task<IDictionary<long, FBComment>> GetComments(Func<int, int, int>? cb = null, bool muid = true)
         {
             IDictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
 
@@ -464,7 +465,7 @@ namespace HRngBackend
                         try
                         {
                             string current_url = Driver.Url; // Just being on the safe side here
-                            Driver.FindElement(By.XPath($"//div[@id='reaction_profile_browser']/div[{n + 1}]//button")).Click();
+                            Driver.FindElement(By.XPath($"//div[@id='reaction_profile_browser']/div[{n + 1}]//div[@data-sigil='send-message-with-attachment']/button")).Click();
                             while (Driver.Url == current_url) Thread.Sleep(10); // Wait until browser URL changes (which is when we can begin to do our magic)
                             uid = Convert.ToInt64(HttpUtility.ParseQueryString(Regex.Replace(HttpUtility.ParseQueryString(Driver.Url.Split('/').Last()).Get("mds"), "(?<=[&?]ids).*(?==)", "")).Get("ids"));
                             Driver.Navigate().Back(); // Go back to previous page
