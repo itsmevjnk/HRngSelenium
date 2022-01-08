@@ -338,27 +338,8 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task DownloadRelease(Release release, [string dir])
-         *   Downloads and extracts a release to the specified (optional)
-         *   directory. If the directory is not specified, the release will
-         *   be extracted to PlatformBase instead.
-         *   Input : release: The release to be downloaded.
-         *           dir    : The directory to which the release is extracted
-         *                    (optional)
-         *   Output: none.
-         */
-        public async Task DownloadRelease(Release release, string dir)
-        {
-            await release.Download(TempFile);
-            await SevenZip.Extract(TempFile, dir);
-        }
-        public async Task DownloadRelease(Release release)
-        {
-            await DownloadRelease(release, BaseDir.PlatformBase);
-        }
-
-        /*
-         * public async Task<int> Update([Func<Release, bool> consent], [Release release])
+         * public async Task<int> Update([Func<Release, bool> consent], [Release release],
+         *                               [Func<float, bool> cb])
          *   Checks for new release and updates Chromium and ChromeDriver.
          *   The Chromium update portion will not be run if the library is
          *   using a local Chrome/Chromium installation (in which case
@@ -378,10 +359,13 @@ namespace HRngBackend
          *                    Please note that in the case of using local 
          *                    Chrome/Chromium installations, this argument will be
          *                    ignored.
+         *           cb     : The callback function used during downloads (optional).
+         *                    For details, refer to the CommonHTTP.Download()
+         *                    function description.
          *   Output: -1 if the user refuses to perform a forced update (i.e.
          *           there's no browser found), or 0 on success.
          */
-        public async Task<int> Update(Func<Release, bool>? consent = null, Release? release = null)
+        public async Task<int> Update(Func<Release, bool>? consent = null, Release? release = null, Func<float, bool>? cb = null)
         {
             if (!ChromeInst)
             {
@@ -406,38 +390,49 @@ namespace HRngBackend
                         }
                     }
                     /* Download Chromium to replace old release */
-                    if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
                         /* With Linux we'll be using AppImage which can actually extract itself */
                         string appimg_file = Path.Combine(BaseDir.PlatformBase, "chromium.AppImage");
-                        await remote.Download(appimg_file);
-                        System.Diagnostics.Process process = new System.Diagnostics.Process();
-                        process.StartInfo.FileName = "chmod";
-                        process.StartInfo.Arguments = $"+x {appimg_file}";
-                        process.StartInfo.UseShellExecute = false;
-                        process.StartInfo.RedirectStandardOutput = true;
-                        process.StartInfo.CreateNoWindow = true;
-                        process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
-                        process = new System.Diagnostics.Process();
-                        process.StartInfo.FileName = appimg_file;
-                        process.StartInfo.WorkingDirectory = BaseDir.PlatformBase;
-                        process.StartInfo.Arguments = "--appimage-extract opt/google/chrome/*";
-                        process.StartInfo.UseShellExecute = false;
-                        process.StartInfo.RedirectStandardOutput = true;
-                        process.StartInfo.CreateNoWindow = true;
-                        process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
-                        Directory.Move(Path.Combine(new string[]{ BaseDir.PlatformBase, "squashfs-root", "opt", "google", "chrome" }), Path.Combine(BaseDir.PlatformBase, "chrome"));
-                        Directory.Delete(Path.Combine(BaseDir.PlatformBase, "squashfs-root"), true);
-                        File.Delete(appimg_file);
+                        if (await remote.Download(appimg_file, cb))
+                        {
+                            if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
+                            System.Diagnostics.Process process = new System.Diagnostics.Process();
+                            process.StartInfo.FileName = "chmod";
+                            process.StartInfo.Arguments = $"+x {appimg_file}";
+                            process.StartInfo.UseShellExecute = false;
+                            process.StartInfo.RedirectStandardOutput = true;
+                            process.StartInfo.CreateNoWindow = true;
+                            process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
+                            process = new System.Diagnostics.Process();
+                            process.StartInfo.FileName = appimg_file;
+                            process.StartInfo.WorkingDirectory = BaseDir.PlatformBase;
+                            process.StartInfo.Arguments = "--appimage-extract opt/google/chrome/*";
+                            process.StartInfo.UseShellExecute = false;
+                            process.StartInfo.RedirectStandardOutput = true;
+                            process.StartInfo.CreateNoWindow = true;
+                            process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
+                            Directory.Move(Path.Combine(new string[] { BaseDir.PlatformBase, "squashfs-root", "opt", "google", "chrome" }), Path.Combine(BaseDir.PlatformBase, "chrome"));
+                            Directory.Delete(Path.Combine(BaseDir.PlatformBase, "squashfs-root"), true);
+                            File.Delete(appimg_file);
+                        }
+                        else
+                        {
+                            if (File.Exists(appimg_file)) File.Delete(appimg_file);
+                            if (remote.Update == 2) return -1;
+                        }
                     }
                     else
                     {
-                        await remote.Download(TempFile); // We'll implement our own download-and-extract code since there are many ways the contents inside the archive is contained
-                        string[] files = new string[1]; // List of files to provide to 7za for extracting
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) files[0] = "Chrome-bin/*"; // Hibbiki puts their Chromium binaries in Chrome-bin/
-                        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) files[0] = ""; // Surprisingly, there's nothing much to Marmaduke's macOS Chromium builds
-                        await SevenZip.Extract(TempFile, Path.Combine(BaseDir.PlatformBase, "chrome"), files);
+                        if (await remote.Download(TempFile, cb))
+                        {
+                            if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
+                            string[] files = new string[1]; // List of files to provide to 7za for extracting
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) files[0] = "Chrome-bin/*"; // Hibbiki puts their Chromium binaries in Chrome-bin/
+                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) files[0] = ""; // Surprisingly, there's nothing much to Marmaduke's macOS Chromium builds
+                            await SevenZip.Extract(TempFile, Path.Combine(BaseDir.PlatformBase, "chrome"), files);
+                        }
+                        else if (remote.Update == 2) return -1;
                     }
                 }
             }
@@ -446,8 +441,12 @@ namespace HRngBackend
             Release driver = await LatestDriverRelease(LocalVersion());
             if (driver.Update != 0)
             {
-                if (File.Exists(ChromeDriverPath)) File.Delete(ChromeDriverPath); // Delete old ChromeDriver
-                await DownloadRelease(driver); // Download and extract new one
+                if (await driver.Download(TempFile, cb))
+                {
+                    if (File.Exists(ChromeDriverPath)) File.Delete(ChromeDriverPath); // Delete old ChromeDriver
+                    await SevenZip.Extract(TempFile, BaseDir.PlatformBase); // Extract temporary file
+                }
+                else if (driver.Update == 2) return -1;
             }
             return 0;
         }

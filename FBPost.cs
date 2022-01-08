@@ -260,22 +260,22 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, FBComment>> GetComments([Func<int, int, int> cb],
+         * public async Task<IDictionary<long, FBComment>> GetComments([Func<float, bool> cb],
          *                                                             [bool muid])
          *   Scrape all comments from the Facebook post.
          *   Input : cb  : Callback function to be called when each
          *                 comment has been saved (optional).
-         *                 This function takes 2 arguments, the first one
-         *                 being the number of comments fetched, and the
-         *                 second one being the total number of comments,
-         *                 and returns an int value that is ignored.
+         *                 This function takes the current percentage and
+         *                 returns true or false, depending on whether the
+         *                 user cancelled the operation.
          *           muid: Whether to retrieve UIDs of accounts mentioned
          *                 in the comments (optional). Enabled by default,
          *                 however, this can be disabled for speed
          *                 improvements if this data is unnecessary.
-         *   Output: a comment ID => FBComment instance dictionary.
+         *   Output: a comment ID => FBComment instance dictionary, or null
+         *           if the function was cancelled.
          */
-        public async Task<IDictionary<long, FBComment>> GetComments(Func<int, int, int>? cb = null, bool muid = true)
+        public async Task<IDictionary<long, FBComment>> GetComments(Func<float, bool>? cb = null, bool muid = true)
         {
             IDictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
 
@@ -312,7 +312,7 @@ namespace HRngBackend
             {
                 var comment_elems = htmldoc.DocumentNode.SelectNodes("//div[@data-sigil='comment inline-reply' or @data-sigil='comment']");
                 int n = 0;
-                if (cb != null) cb(n, comment_elems.Count);
+                if (cb != null & cb(0) == false) return null;
                 foreach (var elem in comment_elems)
                 {
                     long id = Convert.ToInt64(elem.Attributes["id"].DeEntitizeValue); // Comment ID
@@ -376,9 +376,6 @@ namespace HRngBackend
                             }
                         }
                         comments.Add(id, comment);
-
-                        n++;
-                        if (cb != null) cb(n, comment_elems.Count);
                     }
                     FBComment cmt = comments[id];
                     if (cmt.Parent == -1 && elem.Attributes["data-sigil"].DeEntitizeValue.Contains("inline-reply"))
@@ -387,6 +384,9 @@ namespace HRngBackend
                         var elem_parent = elem.SelectSingleNode("./ancestor::div[@data-sigil='comment']");
                         cmt.Parent = Convert.ToInt64(elem_parent.Attributes["id"].DeEntitizeValue);
                     }
+
+                    n++;
+                    if (cb != null && cb(100 * ((float)n / (float)comment_elems.Count)) == false) return null;
                 }
             }
             catch(NoSuchElementException) { }
@@ -395,17 +395,17 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, FBReact>> GetReactions([Func<int, int, int> cb])
+         * public async Task<IDictionary<long, FBReact>> GetReactions([Func<float, bool> cb])
          *  Get all reactions to the post.
          *   Input : cb: Callback function to be called when each
          *               reaction has been saved (optional).
-         *               This function takes 2 arguments, the first one
-         *               being the number of reactions fetched, and the
-         *               second one being the total number of reactions,
-         *               and returns an int value that is ignored.
-         *   Output: an user ID => FBReact instance dictionary.
+         *               This function takes the current percentage and
+         *               returns true or false, depending on whether the
+         *               user cancelled the operation.
+         *   Output: an user ID => FBReact instance dictionary, or null
+         *           if the function is cancelled.
          */
-        public async Task<IDictionary<long, FBReact>> GetReactions(Func<int, int, int>? cb = null)
+        public async Task<IDictionary<long, FBReact>> GetReactions(Func<float, bool>? cb = null)
         {
             IDictionary<long, FBReact> reactions = new Dictionary<long, FBReact>();
 
@@ -449,7 +449,7 @@ namespace HRngBackend
             if(react_elems != null)
             {
                 int n = 0;
-                if (cb != null) cb(n, react_elems.Count);
+                if (cb != null & cb(0) == false) return null;
                 foreach (var elem in react_elems)
                 {
                     FBReact reaction = new FBReact();
@@ -517,7 +517,7 @@ namespace HRngBackend
                     reactions.Add(uid, reaction);
 
                     n++;
-                    if (cb != null) cb(n, react_elems.Count);
+                    if (cb != null && cb(100 * ((float)n / (float)react_elems.Count)) == false) return null;
                 }
             }
 
@@ -525,17 +525,17 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, string>> GetShares([Func<int, int, int> cb])
+         * public async Task<IDictionary<long, string>> GetShares([Func<float, bool> cb])
          *  Get the list of accounts that shared the post.
          *   Input : cb: Callback function to be called when each
          *               reaction has been saved (optional).
-         *               This function takes 2 arguments, the first one
-         *               being the number of accounts fetched, and the
-         *               second one being the total number of accounts,
-         *               and returns an int value that is ignored.
-         *   Output: an user ID => user name dictionary.
+         *               This function takes the current percentage and
+         *               returns true or false, depending on whether the
+         *               user cancelled the operation.
+         *   Output: an user ID => user name dictionary, or null if the
+         *           function is cancelled.
          */
-        public async Task<IDictionary<long, string>> GetShares(Func<int, int, int>? cb = null)
+        public async Task<IDictionary<long, string>> GetShares(Func<float, bool>? cb = null)
         {
             IDictionary<long, string> shares = new Dictionary<long, string>();
 
@@ -552,7 +552,7 @@ namespace HRngBackend
             if (share_elems != null)
             {
                 int n = 0;
-                if (cb != null) cb(n, share_elems.Count);
+                if (cb != null & cb(0) == false) return null;
                 foreach (var elem in share_elems)
                 {
                     /* Get the UID */
@@ -595,7 +595,7 @@ namespace HRngBackend
                     if (!shares.ContainsKey(uid)) shares.Add(uid, elem.SelectSingleNode(".//strong").InnerText);
 
                     n++;
-                    if (cb != null) cb(n, share_elems.Count);
+                    if (cb != null && cb(100 * ((float)n / (float)share_elems.Count)) == false) return null;
                 }
             }
 

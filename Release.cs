@@ -5,7 +5,7 @@
  * Author    : itsmevjnk
  */
 
-using System.IO;
+using System;
 using System.Threading.Tasks;
 
 
@@ -42,17 +42,18 @@ namespace HRngBackend
         public uint Update = 0;
 
         /*
-         * public async Task Download(string destination)
+         * public async Task<bool> Download(string destination, [Func<float, bool> cb])
          *   Downloads the release.
-         *   Input : destination: Path to the file to which the
-         *                        release will be saved.
-         *   Output: none.
+         *   Input : destination: Path to the file to which the release
+         *                        will be saved.
+         *           cb         : The download callback function (optional).
+         *                        For more details, refer to
+         *                        CommonHTTP.Download() function description.
+         *   Output: Output from CommonHTTP.Download().
          */
-        public async Task Download(string destination)
+        public async Task<bool> Download(string destination, Func<float, bool>?cb = null)
         {
-            var resp = await CommonHTTP.Client.GetAsync(DownloadURL);
-            resp.EnsureSuccessStatusCode();
-            using (var fs = new FileStream(destination, FileMode.OpenOrCreate)) await resp.Content.CopyToAsync(fs);
+            return await CommonHTTP.DownloadFile(DownloadURL, destination, cb);
         }
     }
 }
