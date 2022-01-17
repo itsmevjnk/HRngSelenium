@@ -54,6 +54,17 @@ namespace HRngBackend
         public bool IsGroupPost = false;
 
         /*
+         * public long UserID
+         *   The user ID (UID) of the account used with this FBPost
+         *   instance. This is set by the initializer below.
+         *   In cases where the account URL is profile.php only during
+         *   reaction/share checking, it can be assumed that the account
+         *   is the used one (since profile.php without id argument
+         *   points to the logged in account's profile).
+         */
+        public long UserID = -1;
+
+        /*
          * private IWebDriver Driver
          *   The Selenium WebDriver instance associated with this post.
          *   Do NOT share drivers across multiple posts concurrently;
@@ -70,6 +81,20 @@ namespace HRngBackend
         public FBPost(IWebDriver driver)
         {
             Driver = driver;
+        }
+
+        /*
+         * private async Task<long> GetUID(string url)
+         *   Drop-in replacement for UID.Get() which adds handling code
+         *   for cases where the account's URL is profile.php (which points
+         *   to the account being checked).
+         *   Input : same as UID.Get().
+         *   Output: same as UID.Get().
+         */
+        private async Task<long> GetUID(string url)
+        {
+            if (url.Contains("profile.php") && !url.Contains("id=")) return UserID; // The case we're looking for
+            else return await UID.Get(url); // Attempt to get UID using UID.Get() as normal
         }
 
         /*
@@ -111,6 +136,18 @@ namespace HRngBackend
             }
             if (uri_segments.Contains("groups")) IsGroupPost = true; // Group post detected
 
+            /* Get account UID */
+            UserID = -1;
+            try
+            {
+                dynamic data_store = JsonConvert.DeserializeObject(Driver.FindElement(By.XPath("//div[contains(@data-store, 'actor_id')]")).GetAttribute("data-store"));
+                if (data_store != null) UserID = Convert.ToInt64(data_store.actor_id);
+            }
+            catch
+            {
+                return -2;
+            }
+
             /* Get author ID */
             AuthorID = -1; // Just in case this object was re-initialized with another post
             /* Attempt to get directly from URL */
@@ -149,7 +186,7 @@ namespace HRngBackend
             {
                 try
                 {
-                    AuthorID = await UID.Get(Driver.FindElement(By.XPath("//a[@data-sigil='actor-link']")).GetAttribute("href"));
+                    AuthorID = await GetUID(Driver.FindElement(By.XPath("//a[@data-sigil='actor-link']")).GetAttribute("href"));
                 }
                 catch (NoSuchElementException) { }
 
@@ -342,7 +379,7 @@ namespace HRngBackend
                                     if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "")
                                     {
                                         comment.Mentions_Handle.Add(UID.GetHandle(url));
-                                        if (muid) comment.Mentions_UID.Add(await UID.Get(url));
+                                        if (muid) comment.Mentions_UID.Add(await GetUID(url));
                                     }
                                 }
                             }
@@ -503,7 +540,7 @@ namespace HRngBackend
                         }
                     }
                     /* Use UID lookup services */
-                    if (uid == -1) uid = await UID.Get(link);
+                    if (uid == -1) uid = await GetUID(link);
                     else UID.Add(link, uid); // Contribute to the UID cache
                     reaction.UserID = uid;
                     reaction.UserName = elem.SelectSingleNode(".//strong").InnerText;
@@ -588,7 +625,7 @@ namespace HRngBackend
                     }
                     /* Message button is not present so we can ignore it */
                     /* Use UID lookup services */
-                    if (uid == -1) uid = await UID.Get(link);
+                    if (uid == -1) uid = await GetUID(link);
                     else UID.Add(link, uid); // Contribute to the UID cache
 
                     /* Save account */
