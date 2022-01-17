@@ -439,9 +439,14 @@ namespace HRngBackend
                         {
                             if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
                             string[] files = new string[1]; // List of files to provide to 7za for extracting
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) files[0] = "Chrome-bin/*"; // Hibbiki puts their Chromium binaries in Chrome-bin/
-                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) files[0] = ""; // Surprisingly, there's nothing much to Marmaduke's macOS Chromium builds
                             await SevenZip.Extract(TempFile, Path.Combine(BaseDir.PlatformBase, "chrome"), files);
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                /* For Windows, the Chromium executable will be stored in Chrome-bin, and we need to pull that out */
+                                Directory.Move(Path.Combine(BaseDir.PlatformBase, "chrome", "Chrome-bin"), Path.Combine(BaseDir.PlatformBase, "Chrome-bin")); // Move Chrome-bin directory out
+                                Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Remove old chrome directory
+                                Directory.Move(Path.Combine(BaseDir.PlatformBase, "Chrome-bin"), Path.Combine(BaseDir.PlatformBase, "chrome")); // Rename Chrome-bin to chrome
+                            }
                         }
                         else if (remote.Update == 2) return -1;
                     }
@@ -491,11 +496,9 @@ namespace HRngBackend
             if (!no_log) driver.LogPath = Path.Combine(Path.GetDirectoryName(ChromeDriverPath), $"crdrv_{DateTime.Now.ToString("ddMMyyyyHHmmss")}.log");
             ChromeOptions browser = new ChromeOptions();
             browser.BinaryLocation = ChromePath;
-            if (headless)
-            {
-                browser.AddArgument("--headless");
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) browser.AddArgument("--disable-gpu"); // According to Google this is "temporary" for Windows back in 2017, but looks like we still need it in 2021 :/
-            }
+            if (headless) browser.AddArgument("--headless");
+            browser.AddArguments("--disable-extensions --disable-dev-shm-usage --no-sandbox --window-size=800,600".Split(' ')); // Disable extensions, overcome limited resource problems, disable sandboxing, and set window size to 800x600 for screenshotting
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) browser.AddArgument("--disable-gpu"); // According to Google this is "temporary" for Windows back in 2017, but looks like we still need it in 2021 :/
             if (no_img)
             {
                 browser.AddUserProfilePreference("profile.managed_default_content_settings", new Dictionary<string, object> { { "images", 2 } });

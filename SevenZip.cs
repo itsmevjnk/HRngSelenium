@@ -118,7 +118,7 @@ namespace HRngBackend
             proc7z.StartInfo.CreateNoWindow = true;
 
             /* Construct args */
-            proc7z.StartInfo.Arguments = "e";
+            proc7z.StartInfo.Arguments = "x";
             if (overwrite) proc7z.StartInfo.Arguments += " -y";
             if (output_dir != null && output_dir != "") proc7z.StartInfo.Arguments += $" -o\"{output_dir}\"";
             proc7z.StartInfo.Arguments += $" \"{archive}\"";
