@@ -53,16 +53,18 @@ namespace HRngBackend
         public string TempFile = Path.GetTempFileName();
 
         /*
-         * public ChromeHelper()
+         * public ChromeHelper([bool detect])
          *   Class constructor. This locates existing Chrome/Chromium
          *   installations.
          *   It is highly recommended that this class is constructed in a
          *   try-catch structure to catch any exceptions from attempting to
          *   create the base directory (e.g. IOException).
-         *   Input : none.
+         *   Input : detect: Whether to detect existing Chrome/Chromium
+         *                   installations (optional).
+         *                   Enabled by default.
          *   Output: none.
          */
-        public ChromeHelper()
+        public ChromeHelper(bool detect = true)
         {
             ChromeDriverPath = Path.Combine(BaseDir.PlatformBase, "chromedriver");
 
@@ -74,29 +76,32 @@ namespace HRngBackend
                 /* Windows */
                 ChromeDriverPath += ".exe";
 
-                /* Google Chrome */
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Google\Chrome\Application\chrome.exe");
-                if (File.Exists(ChromePath)) return;
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe");
-                if (File.Exists(ChromePath)) return;
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Google\Chrome\Application\chrome.exe");
-                if (File.Exists(ChromePath)) return;
+                if (detect)
+                {
+                    /* Google Chrome */
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Google\Chrome\Application\chrome.exe");
+                    if (File.Exists(ChromePath)) return;
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe");
+                    if (File.Exists(ChromePath)) return;
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Google\Chrome\Application\chrome.exe");
+                    if (File.Exists(ChromePath)) return;
 
-                /* CocCoc */
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\CocCoc\Browser\Application\browser.exe");
-                if (File.Exists(ChromePath)) return;
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\CocCoc\Browser\Application\browser.exe");
-                if (File.Exists(ChromePath)) return;
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\CocCoc\Browser\Application\browser.exe");
-                if (File.Exists(ChromePath)) return;
+                    /* CocCoc */
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\CocCoc\Browser\Application\browser.exe");
+                    if (File.Exists(ChromePath)) return;
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\CocCoc\Browser\Application\browser.exe");
+                    if (File.Exists(ChromePath)) return;
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\CocCoc\Browser\Application\browser.exe");
+                    if (File.Exists(ChromePath)) return;
 
-                /* Chromium (Hibbiki/Marmaduke) */
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Chromium\Application\chrome.exe");
-                if (File.Exists(ChromePath)) return;
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Chromium\Application\chrome.exe");
-                if (File.Exists(ChromePath)) return;
-                ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Chromium\Application\chrome.exe");
-                if (File.Exists(ChromePath)) return;
+                    /* Chromium (Hibbiki/Marmaduke) */
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Chromium\Application\chrome.exe");
+                    if (File.Exists(ChromePath)) return;
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Chromium\Application\chrome.exe");
+                    if (File.Exists(ChromePath)) return;
+                    ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Chromium\Application\chrome.exe");
+                    if (File.Exists(ChromePath)) return;
+                }
 
                 /* Cannot find local installation */
                 ChromeInst = false; ChromePath = Path.Combine(BaseDir.PlatformBase, "chrome", "chrome.exe");
@@ -104,17 +109,20 @@ namespace HRngBackend
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 /* Mac OS X/macOS */
-                /* Google Chrome */
-                ChromePath = @"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-                if (File.Exists(ChromePath)) return;
+                if (detect)
+                {
+                    /* Google Chrome */
+                    ChromePath = @"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+                    if (File.Exists(ChromePath)) return;
 
-                /* CocCoc */
-                ChromePath = @"/Applications/CocCoc.app/Contents/MacOS/CocCoc";
-                if (File.Exists(ChromePath)) return;
+                    /* CocCoc */
+                    ChromePath = @"/Applications/CocCoc.app/Contents/MacOS/CocCoc";
+                    if (File.Exists(ChromePath)) return;
 
-                /* Chromium */
-                ChromePath = @"/Applications/Chromium.app/Contents/MacOS/Chromium";
-                if (File.Exists(ChromePath)) return;
+                    /* Chromium */
+                    ChromePath = @"/Applications/Chromium.app/Contents/MacOS/Chromium";
+                    if (File.Exists(ChromePath)) return;
+                }
 
                 /* Cannot find local installation */
                 string[] path_array = { BaseDir.PlatformBase, "chrome", "Chromium.app", "Contents", "MacOS", "Chromium" };
@@ -123,32 +131,35 @@ namespace HRngBackend
             else
             {
                 /* Linux/FreeBSD (not sure if FreeBSD gets Chrome) */
-                System.Diagnostics.Process proc = new System.Diagnostics.Process();
-                proc.StartInfo.FileName = "whereis";
-                proc.StartInfo.UseShellExecute = false;
-                proc.StartInfo.RedirectStandardOutput = true;
-                proc.StartInfo.CreateNoWindow = true;
-
-                /* Google Chrome */
-                proc.StartInfo.Arguments = "google-chrome";
-                proc.Start();
-                string[] p_out = proc.StandardOutput.ReadToEnd().Split(' ');
-                proc.WaitForExit();
-                if (p_out.Length > 1)
+                if (detect)
                 {
-                    ChromePath = p_out[1];
-                    return;
-                }
+                    System.Diagnostics.Process proc = new System.Diagnostics.Process();
+                    proc.StartInfo.FileName = "whereis";
+                    proc.StartInfo.UseShellExecute = false;
+                    proc.StartInfo.RedirectStandardOutput = true;
+                    proc.StartInfo.CreateNoWindow = true;
 
-                /* Chromium */
-                proc.StartInfo.Arguments = "chromium";
-                proc.Start();
-                p_out = proc.StandardOutput.ReadToEnd().Split(' ');
-                proc.WaitForExit();
-                if (p_out.Length > 1)
-                {
-                    ChromePath = p_out[1];
-                    return;
+                    /* Google Chrome */
+                    proc.StartInfo.Arguments = "google-chrome";
+                    proc.Start();
+                    string[] p_out = proc.StandardOutput.ReadToEnd().Split(' ');
+                    proc.WaitForExit();
+                    if (p_out.Length > 1)
+                    {
+                        ChromePath = p_out[1];
+                        return;
+                    }
+
+                    /* Chromium */
+                    proc.StartInfo.Arguments = "chromium";
+                    proc.Start();
+                    p_out = proc.StandardOutput.ReadToEnd().Split(' ');
+                    proc.WaitForExit();
+                    if (p_out.Length > 1)
+                    {
+                        ChromePath = p_out[1];
+                        return;
+                    }
                 }
 
                 /* Cannot find local installation */
