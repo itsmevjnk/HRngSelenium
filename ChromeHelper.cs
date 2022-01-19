@@ -17,40 +17,13 @@ using System.Threading.Tasks;
 
 namespace HRngBackend
 {
-    public class ChromeHelper
+    public class ChromeHelper : IBrowserHelper
     {
-        /*
-         * public string ChromePath
-         *   Path to the Google Chrome/Chromium executable to be used
-         *   by HRng.
-         *   This library tries to detect local installations of Google
-         *   Chrome and Chromium, and if none can be found, it will resort
-         *   to using Chromium stored in <PlatformBase>.
-         */
-        public string ChromePath;
-
-        /*
-         * public bool ChromeInst
-         *   Set if the Chrome executable used by HRng is installed on the
-         *   machine and not downloaded by HRng.
-         */
-        public bool ChromeInst = true;
-
-        /*
-         * public string ChromeDriverPath
-         *   Path to the ChromeDriver executable to be used by HRng.
-         *   The ChromeDriver executable for the locally installed Chrome version
-         *   will be downloaded and extracted by this library to
-         *   <PlatformBase>.
-         */
-        public string ChromeDriverPath;
-
-        /*
-         * public string TempFile
-         *   Path to the temporary file used by this class.
-         *   This temporary file will be deleted upon instance destruction.
-         */
-        public string TempFile = Path.GetTempFileName();
+        /* Properties specified in the IBrowserHelper interface */
+        public string BrowserPath { get; }
+        public bool BrowserInst { get; } = true;
+        public string DriverPath { get; }
+        public string TempFile { get; } = Path.GetTempFileName();
 
         /*
          * public ChromeHelper([bool detect])
@@ -66,7 +39,7 @@ namespace HRngBackend
          */
         public ChromeHelper(bool detect = true)
         {
-            ChromeDriverPath = Path.Combine(BaseDir.PlatformBase, "chromedriver");
+            DriverPath = Path.Combine(BaseDir.PlatformBase, "chromedriver");
 
             CommonHTTP.Client.DefaultRequestHeaders.Add("User-Agent", UserAgent.Next()); // We have to do this so that GitHub is happy
 
@@ -74,37 +47,37 @@ namespace HRngBackend
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 /* Windows */
-                ChromeDriverPath += ".exe";
+                DriverPath += ".exe";
 
                 if (detect)
                 {
                     /* Google Chrome */
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Google\Chrome\Application\chrome.exe");
-                    if (File.Exists(ChromePath)) return;
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe");
-                    if (File.Exists(ChromePath)) return;
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Google\Chrome\Application\chrome.exe");
-                    if (File.Exists(ChromePath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Google\Chrome\Application\chrome.exe");
+                    if (File.Exists(BrowserPath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe");
+                    if (File.Exists(BrowserPath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Google\Chrome\Application\chrome.exe");
+                    if (File.Exists(BrowserPath)) return;
 
                     /* CocCoc */
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\CocCoc\Browser\Application\browser.exe");
-                    if (File.Exists(ChromePath)) return;
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\CocCoc\Browser\Application\browser.exe");
-                    if (File.Exists(ChromePath)) return;
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\CocCoc\Browser\Application\browser.exe");
-                    if (File.Exists(ChromePath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\CocCoc\Browser\Application\browser.exe");
+                    if (File.Exists(BrowserPath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\CocCoc\Browser\Application\browser.exe");
+                    if (File.Exists(BrowserPath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\CocCoc\Browser\Application\browser.exe");
+                    if (File.Exists(BrowserPath)) return;
 
                     /* Chromium (Hibbiki/Marmaduke) */
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Chromium\Application\chrome.exe");
-                    if (File.Exists(ChromePath)) return;
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Chromium\Application\chrome.exe");
-                    if (File.Exists(ChromePath)) return;
-                    ChromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Chromium\Application\chrome.exe");
-                    if (File.Exists(ChromePath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles%\Chromium\Application\chrome.exe");
+                    if (File.Exists(BrowserPath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%ProgramFiles(x86)%\Chromium\Application\chrome.exe");
+                    if (File.Exists(BrowserPath)) return;
+                    BrowserPath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Chromium\Application\chrome.exe");
+                    if (File.Exists(BrowserPath)) return;
                 }
 
                 /* Cannot find local installation */
-                ChromeInst = false; ChromePath = Path.Combine(BaseDir.PlatformBase, "chrome", "chrome.exe");
+                BrowserInst = false; BrowserPath = Path.Combine(BaseDir.PlatformBase, "chrome", "chrome.exe");
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
@@ -112,21 +85,21 @@ namespace HRngBackend
                 if (detect)
                 {
                     /* Google Chrome */
-                    ChromePath = @"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-                    if (File.Exists(ChromePath)) return;
+                    BrowserPath = @"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+                    if (File.Exists(BrowserPath)) return;
 
                     /* CocCoc */
-                    ChromePath = @"/Applications/CocCoc.app/Contents/MacOS/CocCoc";
-                    if (File.Exists(ChromePath)) return;
+                    BrowserPath = @"/Applications/CocCoc.app/Contents/MacOS/CocCoc";
+                    if (File.Exists(BrowserPath)) return;
 
                     /* Chromium */
-                    ChromePath = @"/Applications/Chromium.app/Contents/MacOS/Chromium";
-                    if (File.Exists(ChromePath)) return;
+                    BrowserPath = @"/Applications/Chromium.app/Contents/MacOS/Chromium";
+                    if (File.Exists(BrowserPath)) return;
                 }
 
                 /* Cannot find local installation */
                 string[] path_array = { BaseDir.PlatformBase, "chrome", "Chromium.app", "Contents", "MacOS", "Chromium" };
-                ChromeInst = false; ChromePath = Path.Combine(path_array);
+                BrowserInst = false; BrowserPath = Path.Combine(path_array);
             }
             else
             {
@@ -146,7 +119,7 @@ namespace HRngBackend
                     proc.WaitForExit();
                     if (p_out.Length > 1)
                     {
-                        ChromePath = p_out[1];
+                        BrowserPath = p_out[1];
                         return;
                     }
 
@@ -157,13 +130,13 @@ namespace HRngBackend
                     proc.WaitForExit();
                     if (p_out.Length > 1)
                     {
-                        ChromePath = p_out[1];
+                        BrowserPath = p_out[1];
                         return;
                     }
                 }
 
                 /* Cannot find local installation */
-                ChromeInst = false; ChromePath = Path.Combine(BaseDir.PlatformBase, "chrome", "chrome");
+                BrowserInst = false; BrowserPath = Path.Combine(BaseDir.PlatformBase, "chrome", "chrome");
             }
         }
 
@@ -178,51 +151,24 @@ namespace HRngBackend
             File.Delete(TempFile);
         }
 
-        /*
-         * public string LocalVersion([string path], [int idx])
-         *   Get the version of Chrome that is locally installed.
-         *   With the optional [path] argument, this function can also be used
-         *   for any Chrome executable.
-         *   Input : path: Path to the Chrome executable (optional).
-         *           idx : The space-split substring index containing the
-         *                 version number (optional). For example, for
-         *                   ChromeDriver 94.0.xxxx.yy (...)
-         *                 the index would be 1.
-         *   Output: String containing the Chrome version, or an empty string
-         *           if the function fails.
-         */
+        /* Functions specified in the IBrowserHelper interface */
+
         public string LocalVersion(string? path = null, int? idx = null)
         {
-            return Versioning.ExecVersion(path ?? ChromePath, idx); // Use the common implementation
+            return Versioning.ExecVersion(path ?? BrowserPath, idx); // Use the common implementation
         }
 
-        /*
-         * public string LocalDriverVersion([string path])
-         *   Get the version of ChromeDriver.
-         *   With the optional [path] argument, this function can also be used
-         *   for any ChromeDriver executable.
-         *   Input : path: Path to the ChromeDriver executable (optional).
-         *   Output: String containing the ChromeDriver version, or an empty
-         *           string if the function fails.
-         */
         public string LocalDriverVersion(string? path = null)
         {
-            return Versioning.ExecVersion(path ?? ChromeDriverPath, 1);
+            return Versioning.ExecVersion(path ?? DriverPath, 1);
         }
 
-        /*
-         * public async Task<Release> LatestRelease()
-         *   Retrieves the latest (stable) release of Chromium available for
-         *   the running platform.
-         *   Input : none.
-         *   Output: The latest Chromium release available.
-         */
         public async Task<Release> LatestRelease()
         {
             try
             {
                 Release release = new Release();
-                if (!File.Exists(ChromePath)) release.Update = 2; // Force update
+                if (!File.Exists(BrowserPath)) release.Update = 2; // Force update
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     string repo = ""; // GitHub repo for Chromium releases for this platform
@@ -271,7 +217,7 @@ namespace HRngBackend
                     }
                 }
                 else throw new InvalidOperationException("Chromium is not available for this operating system");
-                if (release.Update != 2 && !ChromeInst && Versioning.CompareVersion(release.Version, LocalVersion()) > 0) release.Update = 1;
+                if (release.Update != 2 && !BrowserInst && Versioning.CompareVersion(release.Version, LocalVersion()) > 0) release.Update = 1;
                 return release;
             }
             catch
@@ -280,14 +226,6 @@ namespace HRngBackend
             }
         }
 
-        /*
-         * public async Task<Release> LatestDriverRelease(string version)
-         *   Retrieves the latest release of ChromeDriver available for the
-         *   specified Chrome/Chromium version.
-         *   Input : version: The Chrome/Chromium version string. This string
-         *                    must contain at least <major>.<minor>.<build>.
-         *   Output: A Release class containing the ChromeDriver release.
-         */
         public async Task<Release> LatestDriverRelease(string version)
         {
             try
@@ -338,7 +276,7 @@ namespace HRngBackend
                 release.Version = cdver;
                 release.DownloadURL = $"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip";
                 release.ChangelogURL = $"https://chromedriver.storage.googleapis.com/{cdver}/notes.txt";
-                if (!File.Exists(ChromeDriverPath) || Versioning.CompareVersion(release.Version, LocalDriverVersion(), 2) != 0) release.Update = 2; // Force update if ChromeDriver does not exist or there's a version mismatch
+                if (!File.Exists(DriverPath) || Versioning.CompareVersion(release.Version, LocalDriverVersion(), 2) != 0) release.Update = 2; // Force update if ChromeDriver does not exist or there's a version mismatch
 
                 return release;
             }
@@ -348,37 +286,9 @@ namespace HRngBackend
             }
         }
 
-        /*
-         * public async Task<int> Update([Func<Release, bool> consent], [Release release],
-         *                               [Func<float, bool> cb])
-         *   Checks for new release and updates Chromium and ChromeDriver.
-         *   The Chromium update portion will not be run if the library is
-         *   using a local Chrome/Chromium installation (in which case
-         *   updating is the responsibility of the user).
-         *   The consent function will not be called for ChromeDriver updating,
-         *   due to the nature of Chromium requiring a matching ChromeDriver
-         *   binary to work.
-         *   Input : consent: Function for asking the user for consent to update
-         *                    Chrome/Chromium (optional).
-         *                    This function takes a Release instance containing
-         *                    information on the release that will be updated to,
-         *                    and returns true if the user allows the browser to
-         *                    be updated, or false otherwise.
-         *           release: Chromium release to force up/downgrade to (optional).
-         *                    If this is not specified, this function will update
-         *                    to the latest version.
-         *                    Please note that in the case of using local 
-         *                    Chrome/Chromium installations, this argument will be
-         *                    ignored.
-         *           cb     : The callback function used during downloads (optional).
-         *                    For details, refer to the CommonHTTP.Download()
-         *                    function description.
-         *   Output: -1 if the user refuses to perform a forced update (i.e.
-         *           there's no browser found), or 0 on success.
-         */
         public async Task<int> Update(Func<Release, bool>? consent = null, Release? release = null, Func<float, bool>? cb = null)
         {
-            if (!ChromeInst)
+            if (!BrowserInst)
             {
                 /* We can update Chromium */
                 Release remote; // The Chromium version we aim to update to
@@ -459,7 +369,7 @@ namespace HRngBackend
             {
                 if (await driver.Download(TempFile, cb))
                 {
-                    if (File.Exists(ChromeDriverPath)) File.Delete(ChromeDriverPath); // Delete old ChromeDriver
+                    if (File.Exists(DriverPath)) File.Delete(DriverPath); // Delete old ChromeDriver
                     await SevenZip.Extract(TempFile, BaseDir.PlatformBase); // Extract temporary file
                 }
                 else if (driver.Update == 2) return -1;
@@ -467,35 +377,14 @@ namespace HRngBackend
             return 0;
         }
 
-        /*
-         * public IWebDriver InitializeSelenium([bool no_console], [bool verbose], [bool no_log], [bool headless], [bool no_img])
-         *   Initializes Selenium using the Chrome/Chromium and ChromeDriver
-         *   binaries in ChromePath and ChromeDriverPath.
-         *   Input : no_console: Whether to disable showing the console window
-         *                       for ChromeDriver (optional). Set to true by
-         *                       default.
-         *           verbose   : Whether to enable verbose logging (optional).
-         *                       Set to false by default.
-         *           no_log    : Whether to disable saving ChromeDriver's logs
-         *                       to files (optional). Set to false by default.
-         *                       ChromeDriver logs can be found in PlatformBase
-         *                       as crdrv_(timestamp).log.
-         *           headless  : Whether to start Chrome/Chromium in headless
-         *                       mode (i.e. no GUI). Set to true by default.
-         *           no_img    : Whether to disable images loading. Set to true
-         *                       by default. Please note that enabling images
-         *                       loading will result in higher unnecessary data
-         *                       usage and longer loading time.
-         *   Output: An IWebDriver instance from Selenium.
-         */
         public IWebDriver InitializeSelenium(bool no_console = true, bool verbose = false, bool no_log = false, bool headless = true, bool no_img = true)
         {
-            ChromeDriverService driver = ChromeDriverService.CreateDefaultService(Path.GetDirectoryName(ChromeDriverPath), Path.GetFileName(ChromeDriverPath));
+            ChromeDriverService driver = ChromeDriverService.CreateDefaultService(Path.GetDirectoryName(DriverPath), Path.GetFileName(DriverPath));
             driver.EnableVerboseLogging = verbose;
             driver.HideCommandPromptWindow = no_console;
-            if (!no_log) driver.LogPath = Path.Combine(Path.GetDirectoryName(ChromeDriverPath), $"crdrv_{DateTime.Now.ToString("ddMMyyyyHHmmss")}.log");
+            if (!no_log) driver.LogPath = Path.Combine(Path.GetDirectoryName(DriverPath), $"crdrv_{DateTime.Now.ToString("ddMMyyyyHHmmss")}.log");
             ChromeOptions browser = new ChromeOptions();
-            browser.BinaryLocation = ChromePath;
+            browser.BinaryLocation = BrowserPath;
             if (headless) browser.AddArgument("--headless");
             browser.AddArguments("--disable-extensions --disable-dev-shm-usage --no-sandbox --window-size=800,600".Split(' ')); // Disable extensions, overcome limited resource problems, disable sandboxing, and set window size to 800x600 for screenshotting
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) browser.AddArgument("--disable-gpu"); // According to Google this is "temporary" for Windows back in 2017, but looks like we still need it in 2021 :/
