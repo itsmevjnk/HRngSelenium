@@ -258,15 +258,15 @@ namespace HRngBackend
                     cdver = (await resp_ver.Content.ReadAsStringAsync()).Trim();
                 }
 
-                IDictionary<string, string> combo_map = new Dictionary<string, string>{
-                { "Windows.X86", "win32" },
-                { "Windows.X64", "win32" }, // Strangely, Windows x64 binary does not exist :/
-                { "Linux.X86", "linux32" },
-                { "Linux.X64", "linux64" },
-                { "OSX.X86", "mac32" },
-                { "OSX.X64", "mac64" },
-                { "OSX.Arm64", "mac64_m1" }
-            };
+                Dictionary<string, string> combo_map = new Dictionary<string, string>{
+                    { "Windows.X86", "win32" },
+                    { "Windows.X64", "win32" }, // Strangely, Windows x64 binary does not exist :/
+                    { "Linux.X86", "linux32" },
+                    { "Linux.X64", "linux64" },
+                    { "OSX.X86", "mac32" },
+                    { "OSX.X64", "mac64" },
+                    { "OSX.Arm64", "mac64_m1" }
+                };
 
                 /* Check if the request is successful, i.e. the file exists */
                 var resp = await CommonHTTP.Client.GetAsync($"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip");

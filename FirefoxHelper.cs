@@ -174,7 +174,7 @@ namespace HRngBackend
                 var resp = await CommonHTTP.Client.GetAsync("https://firefox-source-docs.mozilla.org/_sources/testing/geckodriver/Support.md.txt");
                 resp.EnsureSuccessStatusCode();
                 string[] support_md = (await resp.Content.ReadAsStringAsync()).Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                IList<(string version, int minver, int maxver)> gd_versions = new List<(string version, int minver, int maxver)>();
+                List<(string version, int minver, int maxver)> gd_versions = new List<(string version, int minver, int maxver)>();
                 for (int line = 0; line < support_md.Length; line++) // TODO: Optimize
                 {
                     if (support_md[line] == " <tr>")
@@ -198,7 +198,7 @@ namespace HRngBackend
                 }
                 if (gdver == "") throw new Exception($"No suitable GeckoDriver version found for Firefox {major}");
 
-                IDictionary<string, string> combo_map = new Dictionary<string, string> {
+                Dictionary<string, string> combo_map = new Dictionary<string, string> {
                     { "Windows.X86", "win32.zip" },
                     { "Windows.X64", "win64.zip" },
                     { "Linux.X86", "linux32.tar.gz" },

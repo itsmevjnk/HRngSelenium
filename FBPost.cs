@@ -129,7 +129,7 @@ namespace HRngBackend
 
             /* Detect group post */
             Uri driver_uri = new Uri(Driver.Url);
-            IList<string> uri_segments = new List<string>();
+            List<string> uri_segments = new List<string>();
             foreach (string seg in driver_uri.Segments)
             {
                 if (!seg.StartsWith('?') && seg != "/") uri_segments.Add(seg.Replace("/", ""));
@@ -297,8 +297,8 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, FBComment>> GetComments([Func<float, bool> cb],
-         *                                                             [bool muid])
+         * public async Task<Dictionary<long, FBComment>> GetComments([Func<float, bool> cb],
+         *                                                            [bool muid])
          *   Scrape all comments from the Facebook post.
          *   Input : cb  : Callback function to be called when each
          *                 comment has been saved (optional).
@@ -312,9 +312,9 @@ namespace HRngBackend
          *   Output: a comment ID => FBComment instance dictionary, or null
          *           if the function was cancelled.
          */
-        public async Task<IDictionary<long, FBComment>> GetComments(Func<float, bool>? cb = null, bool muid = true)
+        public async Task<Dictionary<long, FBComment>> GetComments(Func<float, bool>? cb = null, bool muid = true)
         {
-            IDictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
+            Dictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
 
             /* Get post page */
             Driver.Navigate().GoToUrl((IsGroupPost) ? $"https://m.facebook.com/{PostID}" : $"https://m.facebook.com/story.php?story_fbid={PostID}&id={AuthorID}");
@@ -432,7 +432,7 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, FBReact>> GetReactions([Func<float, bool> cb])
+         * public async Task<Dictionary<long, FBReact>> GetReactions([Func<float, bool> cb])
          *  Get all reactions to the post.
          *   Input : cb: Callback function to be called when each
          *               reaction has been saved (optional).
@@ -442,15 +442,15 @@ namespace HRngBackend
          *   Output: an user ID => FBReact instance dictionary, or null
          *           if the function is cancelled.
          */
-        public async Task<IDictionary<long, FBReact>> GetReactions(Func<float, bool>? cb = null)
+        public async Task<Dictionary<long, FBReact>> GetReactions(Func<float, bool>? cb = null)
         {
-            IDictionary<long, FBReact> reactions = new Dictionary<long, FBReact>();
+            Dictionary<long, FBReact> reactions = new Dictionary<long, FBReact>();
 
             /* Load reactions page */
             Driver.Navigate().GoToUrl($"https://m.facebook.com/ufi/reaction/profile/browser/?ft_ent_identifier={PostID}");
 
             /* Get background-image + background-position => reaction type mapping */
-            IDictionary<string, int> react_map = new Dictionary<string, int>(); // Having string as key instead of tuple should result in better performance
+            Dictionary<string, int> react_map = new Dictionary<string, int>(); // Having string as key instead of tuple should result in better performance
             foreach(var elem in Driver.FindElements(By.XPath("//span[@data-sigil='reaction_profile_sigil' and not(contains(@data-store, 'all'))]")))
             {
                 var elem_img = elem.FindElement(By.XPath(".//i"));
@@ -459,7 +459,7 @@ namespace HRngBackend
             }
 
             /* As it turns out, Facebook conveniently provides us with a perfectly ordered list of shown users' IDs in the AJAX URL, so we can use that to speedrun the UID retrieval process */
-            IList<long> shown_users = new List<long>(); // Where we'll save the IDs
+            List<long> shown_users = new List<long>(); // Where we'll save the IDs
             string prev_shown = ""; // Facebook stacks the new page's shown users before the previous pages' shown users, so we'll have to save the previous shown users list to filter out
             /* Load all reactions */
             while (true)
@@ -562,7 +562,7 @@ namespace HRngBackend
         }
 
         /*
-         * public async Task<IDictionary<long, string>> GetShares([Func<float, bool> cb])
+         * public async Task<Dictionary<long, string>> GetShares([Func<float, bool> cb])
          *  Get the list of accounts that shared the post.
          *   Input : cb: Callback function to be called when each
          *               reaction has been saved (optional).
@@ -572,9 +572,9 @@ namespace HRngBackend
          *   Output: an user ID => user name dictionary, or null if the
          *           function is cancelled.
          */
-        public async Task<IDictionary<long, string>> GetShares(Func<float, bool>? cb = null)
+        public async Task<Dictionary<long, string>> GetShares(Func<float, bool>? cb = null)
         {
-            IDictionary<long, string> shares = new Dictionary<long, string>();
+            Dictionary<long, string> shares = new Dictionary<long, string>();
 
             /* Load shares page */
             Driver.Navigate().GoToUrl($"https://m.facebook.com/browse/shares?id={PostID}");
