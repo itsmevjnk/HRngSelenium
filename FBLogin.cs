@@ -22,7 +22,7 @@ namespace HRngBackend
          */
         public static bool VerifyLogin(IWebDriver driver)
         {
-            if (driver.Url != "https://m.facebook.com/" && driver.Url != "https://m.facebook.com" && !driver.Url.StartsWith("https://m.facebook.com/home.php")) driver.Navigate().GoToUrl("https://m.facebook.com");
+            driver.Navigate().GoToUrl("https://m.facebook.com");
 
             try
             {
