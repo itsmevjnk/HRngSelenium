@@ -228,5 +228,29 @@ namespace HRngBackend
 
             return 0;
         }
+
+        /*
+         * public static long GetUID(IWebDriver driver)
+         *   Get the user ID of the currently logged in user in a Selenium
+         *   session.
+         *   Input : driver : The driver instance for the Selenium session.
+         *            -- OR --
+         *           cookies: A string => string dictionary of cookies for
+         *                    Facebook.
+         *   Output: The logged in user's ID, or -1 if the operation fails.
+         */
+        public static long GetUID(IWebDriver driver)
+        {
+            foreach (var cookie in driver.Manage().Cookies.AllCookies)
+            {
+                if (cookie.Domain.Contains("facebook.com") && cookie.Name == "c_user") return Convert.ToInt64(cookie.Value);
+            }
+            return -1;
+        }
+        public static long GetUID(IDictionary<string, string> cookies)
+        {
+            if (cookies.ContainsKey("c_user")) return Convert.ToInt64(cookies["c_user"]);
+            else return -1;
+        }
     }
 }

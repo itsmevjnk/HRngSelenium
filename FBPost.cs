@@ -54,17 +54,6 @@ namespace HRngBackend
         public bool IsGroupPost = false;
 
         /*
-         * public long UserID
-         *   The user ID (UID) of the account used with this FBPost
-         *   instance. This is set by the initializer below.
-         *   In cases where the account URL is profile.php only during
-         *   reaction/share checking, it can be assumed that the account
-         *   is the used one (since profile.php without id argument
-         *   points to the logged in account's profile).
-         */
-        public long UserID = -1;
-
-        /*
          * private IWebDriver Driver
          *   The Selenium WebDriver instance associated with this post.
          *   Do NOT share drivers across multiple posts concurrently;
@@ -93,7 +82,7 @@ namespace HRngBackend
          */
         private async Task<long> GetUID(string url)
         {
-            if (url.Contains("profile.php") && !url.Contains("id=")) return UserID; // The case we're looking for
+            if (url.Contains("profile.php") && !url.Contains("id=")) return FBLogin.GetUID(Driver); // The case we're looking for
             else return await UID.Get(url); // Attempt to get UID using UID.Get() as normal
         }
 
@@ -135,18 +124,6 @@ namespace HRngBackend
                 if (!seg.StartsWith('?') && seg != "/") uri_segments.Add(seg.Replace("/", ""));
             }
             if (uri_segments.Contains("groups")) IsGroupPost = true; // Group post detected
-
-            /* Get account UID */
-            UserID = -1;
-            try
-            {
-                dynamic data_store = JsonConvert.DeserializeObject(Driver.FindElement(By.XPath("//div[contains(@data-store, 'actor_id')]")).GetAttribute("data-store"));
-                if (data_store != null) UserID = Convert.ToInt64(data_store.actor_id);
-            }
-            catch
-            {
-                return -2;
-            }
 
             /* Get author ID */
             AuthorID = -1; // Just in case this object was re-initialized with another post
