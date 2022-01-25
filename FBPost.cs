@@ -492,7 +492,7 @@ namespace HRngBackend
                     FBReact reaction = new FBReact();
 
                     /* Get the UID */
-                    string link = elem.SelectSingleNode("./div[1]/div[1]/a").GetAttributeValue("href", "");
+                    string link = elem.SelectSingleNode("./div[1]/div[1]//i[contains(@class, 'profpic')]/..").GetAttributeValue("href", "");
                     long uid = -1;
                     /* From shown user ID list */
                     if (n < shown_users.Count) uid = shown_users[n];
@@ -593,7 +593,7 @@ namespace HRngBackend
                 foreach (var elem in share_elems)
                 {
                     /* Get the UID */
-                    string link = elem.SelectSingleNode("./div[1]/div[1]/a").Attributes["href"].DeEntitizeValue;
+                    string link = elem.SelectSingleNode("./div[1]/div[1]//i[contains(@class, 'profpic')]/..").Attributes["href"].DeEntitizeValue;
                     long uid = -1;
                     /* These methods turn out to be working with shares too */
                     /* From add friend button */
