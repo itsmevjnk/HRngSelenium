@@ -215,14 +215,14 @@ namespace HRngBackend
                     driver.FindElement(By.XPath("//form[@action='/login/device-based/update-nonce/']//button")).Click();
                     while (driver.Url == url) Thread.Sleep(10); // More waiting
                 }
+            }
 
-                if (cookies != null)
+            if (cookies != null)
+            {
+                /* Get cookies */
+                foreach (var cookie in driver.Manage().Cookies.AllCookies)
                 {
-                    /* Get cookies */
-                    foreach (var cookie in driver.Manage().Cookies.AllCookies)
-                    {
-                        if (cookie.Domain.Contains("facebook.com")) cookies.Add(cookie.Name, cookie.Value);
-                    }
+                    if (cookie.Domain.Contains("facebook.com")) cookies.Add(cookie.Name, cookie.Value);
                 }
             }
 
