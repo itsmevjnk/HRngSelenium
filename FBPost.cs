@@ -381,85 +381,87 @@ namespace HRngBackend
                     foreach (var elem in comment_elems)
                     {
                         long id = Convert.ToInt64(elem.Attributes["id"].DeEntitizeValue); // Comment ID
-                        if (ids.Contains(id)) continue; // Already processed from previous pass, skip
-                        if(!comments.ContainsKey(id))
+                        if (!ids.Contains(id))
                         {
-                            FBComment comment = new FBComment();
-                            comment.ID = id;
-                            var elem_profile_pict = elem.SelectSingleNode("./div[contains(@data-sigil, 'feed_story_ring')]");
-                            comment.AuthorID = Convert.ToInt64(elem_profile_pict.Attributes["data-sigil"].DeEntitizeValue.Replace("feed_story_ring", ""));
-                            var elem_comment = elem_profile_pict.SelectSingleNode("./following-sibling::div[1]");
-                            var elem_author = elem_comment.SelectSingleNode("./div[1]//div[@class='_2b05']"); // TODO: Find a better way to do this (i.e. without using classes)
-                            if (elem_author.SelectSingleNode("./a") != null) UID.Add(elem_author.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue, comment.AuthorID);
-                            comment.AuthorName = elem_author.InnerText; // TODO: Remove the Author text on top of the name
-                            var elem_body = elem_comment.SelectSingleNode("./div[1]//div[@data-sigil='comment-body']");
-                            if (elem_body != null)
+                            if (!comments.ContainsKey(id))
                             {
-                                comment.CommentText = HttpUtility.HtmlDecode(elem_body.InnerText);
-                                comment.CommentText_HTML = elem_body.InnerHtml;
-                            }
-                            if (comment.CommentText != "")
-                            {
-                                int placeholder_cnt = -10;
-                                var elem_mentions = elem_body.SelectNodes("./a");
-                                if (elem_mentions != null)
+                                FBComment comment = new FBComment();
+                                comment.ID = id;
+                                var elem_profile_pict = elem.SelectSingleNode("./div[contains(@data-sigil, 'feed_story_ring')]");
+                                comment.AuthorID = Convert.ToInt64(elem_profile_pict.Attributes["data-sigil"].DeEntitizeValue.Replace("feed_story_ring", ""));
+                                var elem_comment = elem_profile_pict.SelectSingleNode("./following-sibling::div[1]");
+                                var elem_author = elem_comment.SelectSingleNode(".//div[@class='_2b05']"); // TODO: Find a better way to do this (i.e. without using classes)
+                                if (elem_author.SelectSingleNode("./a") != null && elem_author.SelectSingleNode("./a").Attributes["href"] != null) UID.Add(elem_author.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue, comment.AuthorID);
+                                comment.AuthorName = elem_author.InnerText; // TODO: Remove the Author text on top of the name
+                                var elem_body = elem_comment.SelectSingleNode("./div[1]//div[@data-sigil='comment-body']");
+                                if (elem_body != null)
                                 {
-                                    foreach (var elem_mention in elem_mentions)
+                                    comment.CommentText = HttpUtility.HtmlDecode(elem_body.InnerText);
+                                    comment.CommentText_HTML = elem_body.InnerHtml;
+                                }
+                                if (comment.CommentText != "")
+                                {
+                                    int placeholder_cnt = -10;
+                                    var elem_mentions = elem_body.SelectNodes("./a");
+                                    if (elem_mentions != null)
                                     {
-                                        if (elem_mention.Attributes["href"] == null)
+                                        foreach (var elem_mention in elem_mentions)
                                         {
-                                            comment.Mentions_Handle.Add($"Unknown {elem_mention.InnerText} ({placeholder_cnt})");
-                                            if (muid) comment.Mentions_UID.Add(placeholder_cnt);
-                                            placeholder_cnt--;
-                                        }
-                                        else
-                                        {
-                                            string url = elem_mention.Attributes["href"].DeEntitizeValue;
-                                            if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "")
+                                            if (elem_mention.Attributes["href"] == null)
                                             {
-                                                comment.Mentions_Handle.Add(UID.GetHandle(url));
-                                                if (muid) comment.Mentions_UID.Add(await GetUID(url));
+                                                comment.Mentions_Handle.Add($"Unknown {elem_mention.InnerText} ({placeholder_cnt})");
+                                                if (muid) comment.Mentions_UID.Add(placeholder_cnt);
+                                                placeholder_cnt--;
+                                            }
+                                            else
+                                            {
+                                                string url = elem_mention.Attributes["href"].DeEntitizeValue;
+                                                if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "")
+                                                {
+                                                    comment.Mentions_Handle.Add(UID.GetHandle(url));
+                                                    if (muid) comment.Mentions_UID.Add(await GetUID(url));
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                            if (elem_comment.SelectNodes("./div").Count == 4)
-                            {
-                                /* Embedded content */
-                                var elem_embed = elem_comment.SelectSingleNode("./div[2]");
-                                if (elem_embed.SelectSingleNode("./i[contains(@style, 'background-image')]") != null)
+                                if (elem_comment.SelectNodes("./div").Count == 4)
                                 {
-                                    try { comment.StickerURL = Driver.FindElement(By.XPath($"//div[@data-sigil='comment inline-reply' or @data-sigil='comment'][{n + 1}]/div[contains(@data-sigil, 'feed_story_ring')]/following-sibling::div[1]/div[2]/i[contains(@style, 'background-image')]")).GetCssValue("background-image").Replace("url(", "").Replace(")", "").Replace("\"", "").Replace("'", ""); }
-                                    catch (NoSuchElementException) { }
-                                }
-                                var elem_embed2 = elem_embed;
-                                if (!elem_embed2.Attributes.Contains("title")) elem_embed2 = elem_embed.SelectSingleNode("./div[@title]");
-                                if (elem_embed2 != null && elem_embed2.Attributes.Contains("title"))
-                                {
-                                    comment.EmbedTitle = elem_embed2.Attributes["title"].DeEntitizeValue;
-                                    comment.EmbedURL = elem_embed2.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue;
-                                    if (comment.EmbedURL.StartsWith('/')) comment.EmbedURL = "https://m.facebook.com" + comment.EmbedURL;
-                                }
-                                var elem_attach = elem_embed.SelectSingleNode("./div[contains(@class, 'attachment')]/*");
-                                if (elem_attach != null)
-                                {
-                                    if (elem_attach.Name == "a" && elem_attach.Attributes.Contains("href") && (elem_attach.Attributes["href"].DeEntitizeValue.Contains("photo.php") || elem_attach.Attributes["href"].DeEntitizeValue.Contains("/photos/"))) comment.ImageURL = "https://m.facebook.com" + elem_attach.Attributes["href"].DeEntitizeValue;
-                                    if (elem_attach.Name == "div" && elem_attach.Attributes.Contains("data-store") && elem_attach.Attributes["data-store"].DeEntitizeValue.Contains("videoURL"))
+                                    /* Embedded content */
+                                    var elem_embed = elem_comment.SelectSingleNode("./div[2]");
+                                    if (elem_embed.SelectSingleNode("./i[contains(@style, 'background-image')]") != null)
                                     {
-                                        dynamic data_store = JsonConvert.DeserializeObject(elem_attach.Attributes["data-store"].DeEntitizeValue);
-                                        if (data_store != null) comment.VideoURL = data_store.videoURL;
+                                        try { comment.StickerURL = Driver.FindElement(By.XPath($"//div[@data-sigil='comment inline-reply' or @data-sigil='comment'][{n + 1}]/div[contains(@data-sigil, 'feed_story_ring')]/following-sibling::div[1]/div[2]/i[contains(@style, 'background-image')]")).GetCssValue("background-image").Replace("url(", "").Replace(")", "").Replace("\"", "").Replace("'", ""); }
+                                        catch (NoSuchElementException) { }
+                                    }
+                                    var elem_embed2 = elem_embed;
+                                    if (!elem_embed2.Attributes.Contains("title")) elem_embed2 = elem_embed.SelectSingleNode("./div[@title]");
+                                    if (elem_embed2 != null && elem_embed2.Attributes.Contains("title"))
+                                    {
+                                        comment.EmbedTitle = elem_embed2.Attributes["title"].DeEntitizeValue;
+                                        comment.EmbedURL = elem_embed2.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue;
+                                        if (comment.EmbedURL.StartsWith('/')) comment.EmbedURL = "https://m.facebook.com" + comment.EmbedURL;
+                                    }
+                                    var elem_attach = elem_embed.SelectSingleNode("./div[contains(@class, 'attachment')]/*");
+                                    if (elem_attach != null)
+                                    {
+                                        if (elem_attach.Name == "a" && elem_attach.Attributes.Contains("href") && (elem_attach.Attributes["href"].DeEntitizeValue.Contains("photo.php") || elem_attach.Attributes["href"].DeEntitizeValue.Contains("/photos/"))) comment.ImageURL = "https://m.facebook.com" + elem_attach.Attributes["href"].DeEntitizeValue;
+                                        if (elem_attach.Name == "div" && elem_attach.Attributes.Contains("data-store") && elem_attach.Attributes["data-store"].DeEntitizeValue.Contains("videoURL"))
+                                        {
+                                            dynamic data_store = JsonConvert.DeserializeObject(elem_attach.Attributes["data-store"].DeEntitizeValue);
+                                            if (data_store != null) comment.VideoURL = data_store.videoURL;
+                                        }
                                     }
                                 }
+                                comments.Add(id, comment);
                             }
-                            comments.Add(id, comment);
-                        }
-                        FBComment cmt = comments[id];
-                        if (cmt.Parent == -1 && elem.Attributes["data-sigil"].DeEntitizeValue.Contains("inline-reply"))
-                        {
-                            /* This comment is a reply, now find its parent */
-                            var elem_parent = elem.SelectSingleNode("./ancestor::div[@data-sigil='comment']");
-                            cmt.Parent = Convert.ToInt64(elem_parent.Attributes["id"].DeEntitizeValue);
+                            FBComment cmt = comments[id];
+                            if (cmt.Parent == -1 && elem.Attributes["data-sigil"].DeEntitizeValue.Contains("inline-reply"))
+                            {
+                                /* This comment is a reply, now find its parent */
+                                var elem_parent = elem.SelectSingleNode("./ancestor::div[@data-sigil='comment']");
+                                cmt.Parent = Convert.ToInt64(elem_parent.Attributes["id"].DeEntitizeValue);
+                            }
                         }
 
                         n++;
