@@ -63,7 +63,7 @@ namespace HRngBackend
                     /* Get cookies */
                     foreach (var cookie in driver.Manage().Cookies.AllCookies)
                     {
-                        if (cookie.Domain.Contains("facebook.com")) cookies.Add(cookie.Name, cookie.Value);
+                        if (!cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
                     }
                 }
                 return -5;
@@ -112,7 +112,7 @@ namespace HRngBackend
                 /* Get cookies */
                 foreach (var cookie in driver.Manage().Cookies.AllCookies)
                 {
-                    if (cookie.Domain.Contains("facebook.com")) cookies.Add(cookie.Name, cookie.Value);
+                    if (!cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
                 }
             }
 
@@ -153,7 +153,7 @@ namespace HRngBackend
                     /* Get cookies */
                     foreach (var cookie in driver.Manage().Cookies.AllCookies)
                     {
-                        if (cookie.Domain.Contains("facebook.com")) cookies.Add(cookie.Name, cookie.Value);
+                        if (!cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
                     }
                 }
                 return -1;
@@ -222,7 +222,7 @@ namespace HRngBackend
                 /* Get cookies */
                 foreach (var cookie in driver.Manage().Cookies.AllCookies)
                 {
-                    if (cookie.Domain.Contains("facebook.com")) cookies.Add(cookie.Name, cookie.Value);
+                    if (!cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
                 }
             }
 
