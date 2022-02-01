@@ -234,7 +234,7 @@ namespace HRngBackend
         }
 
         /*
-         * private int ClickAndWait(string click_xpath, [string check_xpath], [int delay])
+         * private int ClickAndWait(string click_xpath, [string check_xpath], [int delay], [IWebElement elem])
          *   Helper function to click an element and wait for the
          *   the AJAX request to finish. Useful for loading more
          *   items.
@@ -251,21 +251,33 @@ namespace HRngBackend
          *                        for after the checking is complete
          *                        to let the new elements load.
          *                        Defaults to 250ms.
+         *           elem       : The root element to perform on (optional).
+         *                        If not specified, the operation will
+         *                        be done on the root element.
          *   Output: -1 if there's no element to click, or 0 if
          *           the function succeeds.
          */
-        private int ClickAndWait(string click_xpath, string check_xpath = "//*[contains(@class, 'async_elem_saving')]", int delay = 250)
+        private int ClickAndWait(string click_xpath, string check_xpath = "//*[contains(@class, 'async_elem_saving')]", int delay = 250, IWebElement elem = null)
         {
             while (true)
             {
-                try { Driver.FindElement(By.XPath(click_xpath)).Click(); break; }
+                try
+                {
+                    if (elem == null) Driver.FindElement(By.XPath(click_xpath)).Click();
+                    else elem.FindElement(By.XPath(click_xpath)).Click();
+                    break;
+                }
                 catch (NoSuchElementException) { return -1; }
                 catch (StaleElementReferenceException) { }
                 catch (ElementClickInterceptedException) { } // Just try again basically
             }
             while (true)
             {
-                try { Driver.FindElement(By.XPath(check_xpath)); }
+                try
+                {
+                    if (elem == null) Driver.FindElement(By.XPath(check_xpath));
+                    else elem.FindElement(By.XPath(check_xpath));
+                }
                 catch (NoSuchElementException) { break; }
                 catch (StaleElementReferenceException) { }
             }
@@ -275,136 +287,189 @@ namespace HRngBackend
 
         /*
          * public async Task<Dictionary<long, FBComment>> GetComments([Func<float, bool> cb],
-         *                                                            [bool muid])
+         *                                                            [bool muid], [bool p1], [bool p2])
          *   Scrape all comments from the Facebook post.
-         *   Input : cb  : Callback function to be called when each
-         *                 comment has been saved (optional).
-         *                 This function takes the current percentage and
-         *                 returns true or false, depending on whether the
-         *                 user cancelled the operation.
-         *           muid: Whether to retrieve UIDs of accounts mentioned
-         *                 in the comments (optional). Enabled by default,
-         *                 however, this can be disabled for speed
-         *                 improvements if this data is unnecessary.
+         *   Input : cb    : Callback function to be called when each
+         *                   comment has been saved (optional).
+         *                   This function takes the current percentage and
+         *                   returns true or false, depending on whether the
+         *                   user cancelled the operation.
+         *           muid  : Whether to retrieve UIDs of accounts mentioned
+         *                   in the comments (optional). Enabled by default,
+         *                   however, this can be disabled for speed
+         *                   improvements if this data is unnecessary.
+         *           p1, p2: Specifies whether which comments obtainment
+         *                   pass is performed.
+         *                   p1 (Pass 1) gets all comments with an account
+         *                   logged in. Due to Facebook's algorithms, this
+         *                   pass does not guarantee obtainment of all
+         *                   comments.
+         *                   p2 (Pass 2) gets all comments WITHOUT logging
+         *                   in any account. This will allow for the maximum
+         *                   number of comments to be obtained (except for 
+         *                   those from non-public accounts or those that
+         *                   Facebook's algorithms decide to hide). However,
+         *                   depending on the mentioned accounts' privacy
+         *                   settings, their UIDs/profile links may NOT be
+         *                   obtainable, in which case a decrementing number
+         *                   starting from -10 is used as the UID, and
+         *                   "Unknown <name shown in the comment> (<UID>)"
+         *                   is used as the profile link.
+         *                   By default, this function will perform Pass 1
+         *                   only. For the maximum amount of comments, Pass 2
+         *                   can be performed with Pass 1, but at a certain
+         *                   performance and bandwidth cost.
          *   Output: a comment ID => FBComment instance dictionary, or null
          *           if the function was cancelled.
          */
-        public async Task<Dictionary<long, FBComment>> GetComments(Func<float, bool>? cb = null, bool muid = true)
+        public async Task<Dictionary<long, FBComment>> GetComments(Func<float, bool>? cb = null, bool muid = true, bool p1 = true, bool p2 = false)
         {
             Dictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
 
-            /* Get post page */
-            Driver.Navigate().GoToUrl((IsGroupPost) ? $"https://m.facebook.com/{PostID}" : $"https://m.facebook.com/story.php?story_fbid={PostID}&id={AuthorID}");
+            int pass = (p1) ? 1 : 2; // We'll do pass 1 first
+            float npass = ((p1) ? 1 : 0) + ((p2) ? 1 : 0); // Number of passes to do
 
-            /* Load all top-level comments */
-            int cnt = 0, cnt_prev = 0; // Current and previous comments count
-            do
-            {
+            for (int pn = 0; pn < (int)npass; pn++, pass++) {
+                /* Get post page */
+                Driver.Navigate().GoToUrl((IsGroupPost) ? $"https://m.facebook.com/{PostID}" : $"https://m.facebook.com/story.php?story_fbid={PostID}&id={AuthorID}");
+
+                Dictionary<string, string> cookies = null;
+                if (pass == 2) {
+                    /* Back up cookies, then log out by deleting all cookies */
+                    cookies = Cookies.Se_SaveCookies(Driver);
+                    Cookies.Se_ClearCookies(Driver);
+                    Driver.Navigate().Refresh(); // Refresh so we end up being logged out
+
+                    /* Remove login popup */
+                    ((IJavaScriptExecutor)Driver).ExecuteScript("return document.querySelector('[data-sigil=loggedout_mobile_cta_footer]').parentElement.remove();");
+                }
+
+                var elem_post_s = Driver.FindElement(By.XPath("//div[@data-sigil='m-story-view']")); // Get post container element (Selenium)
+
+                /* Load all top-level comments */
+                int cnt = 0, cnt_prev = 0; // Current and previous comments count
+                do
+                {
+                    try
+                    {
+                        cnt_prev = cnt;
+                        if (ClickAndWait(".//div[starts-with(@id, 'see_next') or starts-with(@id, 'see_prev')]", elem: elem_post_s) == -1) break;
+                        for (int i = 0; i < 5 && cnt_prev == cnt; i++)
+                        {
+                            Thread.Sleep(200); // Poll for changes 5 times, each time every 200ms (1s in total)
+                            cnt = elem_post_s.FindElements(By.XPath(".//div[@data-sigil='comment inline-reply' or @data-sigil='comment']")).Count;
+                        }
+                    }
+                    catch (NoSuchElementException) { break; }
+                    catch (StaleElementReferenceException) { continue; }
+                } while (cnt != cnt_prev);
+
+                /* Load all replies */
+                while (ClickAndWait("//div[starts-with(@data-sigil, 'replies-see')]", elem: elem_post_s) != -1) ;
+
+                /* Selenium seems to be pretty slow when it comes to finding elements, so we'll use HtmlAgilityPack instead */
+                HtmlDocument htmldoc = new HtmlDocument();
+                htmldoc.LoadHtml(Driver.PageSource);
+
+                /* Read each comment */
                 try
                 {
-                    cnt_prev = cnt;
-                    if (ClickAndWait("//div[starts-with(@id, 'see_next') or starts-with(@id, 'see_prev')]") == -1) break;
-                    for (int i = 0; i < 5 && cnt_prev == cnt; i++)
+                    var comment_elems = htmldoc.DocumentNode.SelectSingleNode("//div[@data-sigil='m-story-view']").SelectNodes(".//div[@data-sigil='comment inline-reply' or @data-sigil='comment']");
+                    int n = 0;
+                    if (cb != null & cb(0) == false) return null;
+                    var ids = comments.Keys; // List of comment IDs from previous pass (so we can skip comments that we've fetched)
+                    foreach (var elem in comment_elems)
                     {
-                        Thread.Sleep(200); // Poll for changes 5 times, each time every 200ms (1s in total)
-                        cnt = Driver.FindElements(By.XPath("//div[@data-sigil='comment inline-reply' or @data-sigil='comment']")).Count;
-                    }
-                }
-                catch (NoSuchElementException) { break; }
-                catch (StaleElementReferenceException) { continue; }
-            } while (cnt != cnt_prev);
-
-            /* Load all replies */
-            while (ClickAndWait("//div[starts-with(@data-sigil, 'replies-see')]") != -1) ;
-
-            /* Selenium seems to be pretty slow when it comes to finding elements, so we'll use HtmlAgilityPack instead */
-            HtmlDocument htmldoc = new HtmlDocument();
-            htmldoc.LoadHtml(Driver.PageSource);
-
-            /* Read each comment */
-            try
-            {
-                var comment_elems = htmldoc.DocumentNode.SelectNodes("//div[@data-sigil='comment inline-reply' or @data-sigil='comment']");
-                int n = 0;
-                if (cb != null & cb(0) == false) return null;
-                foreach (var elem in comment_elems)
-                {
-                    long id = Convert.ToInt64(elem.Attributes["id"].DeEntitizeValue); // Comment ID
-                    if(!comments.ContainsKey(id))
-                    {
-                        FBComment comment = new FBComment();
-                        comment.ID = id;
-                        var elem_profile_pict = elem.SelectSingleNode("./div[contains(@data-sigil, 'feed_story_ring')]");
-                        comment.AuthorID = Convert.ToInt64(elem_profile_pict.Attributes["data-sigil"].DeEntitizeValue.Replace("feed_story_ring", ""));
-                        var elem_comment = elem_profile_pict.SelectSingleNode("./following-sibling::div[1]");
-                        UID.Add(elem_comment.SelectSingleNode("./div[1]//a").Attributes["href"].DeEntitizeValue, comment.AuthorID);
-                        comment.AuthorName = elem_comment.SelectSingleNode("./div[1]//a").InnerText; // TODO: Remove the Author text on top of the name
-                        var elem_body = elem_comment.SelectSingleNode("./div[1]//div[@data-sigil='comment-body']");
-                        if (elem_body != null)
+                        long id = Convert.ToInt64(elem.Attributes["id"].DeEntitizeValue); // Comment ID
+                        if (ids.Contains(id)) continue; // Already processed from previous pass, skip
+                        if(!comments.ContainsKey(id))
                         {
-                            comment.CommentText = HttpUtility.HtmlDecode(elem_body.InnerText);
-                            comment.CommentText_HTML = elem_body.InnerHtml;
-                        }
-                        if (comment.CommentText != "")
-                        {
-                            var elem_mentions = elem_body.SelectNodes("./a");
-                            if (elem_mentions != null)
+                            FBComment comment = new FBComment();
+                            comment.ID = id;
+                            var elem_profile_pict = elem.SelectSingleNode("./div[contains(@data-sigil, 'feed_story_ring')]");
+                            comment.AuthorID = Convert.ToInt64(elem_profile_pict.Attributes["data-sigil"].DeEntitizeValue.Replace("feed_story_ring", ""));
+                            var elem_comment = elem_profile_pict.SelectSingleNode("./following-sibling::div[1]");
+                            var elem_author = elem_comment.SelectSingleNode("./div[1]//div[@class='_2b05']"); // TODO: Find a better way to do this (i.e. without using classes)
+                            if (elem_author.SelectSingleNode("./a") != null) UID.Add(elem_author.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue, comment.AuthorID);
+                            comment.AuthorName = elem_author.InnerText; // TODO: Remove the Author text on top of the name
+                            var elem_body = elem_comment.SelectSingleNode("./div[1]//div[@data-sigil='comment-body']");
+                            if (elem_body != null)
                             {
-                                foreach (var elem_mention in elem_mentions)
+                                comment.CommentText = HttpUtility.HtmlDecode(elem_body.InnerText);
+                                comment.CommentText_HTML = elem_body.InnerHtml;
+                            }
+                            if (comment.CommentText != "")
+                            {
+                                int placeholder_cnt = -10;
+                                var elem_mentions = elem_body.SelectNodes("./a");
+                                if (elem_mentions != null)
                                 {
-                                    string url = elem_mention.Attributes["href"].DeEntitizeValue;
-                                    if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "")
+                                    foreach (var elem_mention in elem_mentions)
                                     {
-                                        comment.Mentions_Handle.Add(UID.GetHandle(url));
-                                        if (muid) comment.Mentions_UID.Add(await GetUID(url));
+                                        if (elem_mention.Attributes["href"] == null)
+                                        {
+                                            comment.Mentions_Handle.Add($"Unknown {elem_mention.InnerText} ({placeholder_cnt})");
+                                            if (muid) comment.Mentions_UID.Add(placeholder_cnt);
+                                            placeholder_cnt--;
+                                        }
+                                        else
+                                        {
+                                            string url = elem_mention.Attributes["href"].DeEntitizeValue;
+                                            if (url.StartsWith("/") && !url.Contains(elem_mention.InnerText) && UID.GetHandle(url) != "")
+                                            {
+                                                comment.Mentions_Handle.Add(UID.GetHandle(url));
+                                                if (muid) comment.Mentions_UID.Add(await GetUID(url));
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
-                        if (elem_comment.SelectNodes("./div").Count == 4)
-                        {
-                            /* Embedded content */
-                            var elem_embed = elem_comment.SelectSingleNode("./div[2]");
-                            if (elem_embed.SelectSingleNode("./i[contains(@style, 'background-image')]") != null)
+                            if (elem_comment.SelectNodes("./div").Count == 4)
                             {
-                                try { comment.StickerURL = Driver.FindElement(By.XPath($"//div[@data-sigil='comment inline-reply' or @data-sigil='comment'][{n + 1}]/div[contains(@data-sigil, 'feed_story_ring')]/following-sibling::div[1]/div[2]/i[contains(@style, 'background-image')]")).GetCssValue("background-image").Replace("url(", "").Replace(")", "").Replace("\"", "").Replace("'", ""); }
-                                catch (NoSuchElementException) { }
-                            }
-                            var elem_embed2 = elem_embed;
-                            if (!elem_embed2.Attributes.Contains("title")) elem_embed2 = elem_embed.SelectSingleNode("./div[@title]");
-                            if (elem_embed2 != null && elem_embed2.Attributes.Contains("title"))
-                            {
-                                comment.EmbedTitle = elem_embed2.Attributes["title"].DeEntitizeValue;
-                                comment.EmbedURL = elem_embed2.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue;
-                                if (comment.EmbedURL.StartsWith('/')) comment.EmbedURL = "https://m.facebook.com" + comment.EmbedURL;
-                            }
-                            var elem_attach = elem_embed.SelectSingleNode("./div[contains(@class, 'attachment')]/*");
-                            if (elem_attach != null)
-                            {
-                                if (elem_attach.Name == "a" && elem_attach.Attributes.Contains("href") && (elem_attach.Attributes["href"].DeEntitizeValue.Contains("photo.php") || elem_attach.Attributes["href"].DeEntitizeValue.Contains("/photos/"))) comment.ImageURL = "https://m.facebook.com" + elem_attach.Attributes["href"].DeEntitizeValue;
-                                if (elem_attach.Name == "div" && elem_attach.Attributes.Contains("data-store") && elem_attach.Attributes["data-store"].DeEntitizeValue.Contains("videoURL"))
+                                /* Embedded content */
+                                var elem_embed = elem_comment.SelectSingleNode("./div[2]");
+                                if (elem_embed.SelectSingleNode("./i[contains(@style, 'background-image')]") != null)
                                 {
-                                    dynamic data_store = JsonConvert.DeserializeObject(elem_attach.Attributes["data-store"].DeEntitizeValue);
-                                    if (data_store != null) comment.VideoURL = data_store.videoURL;
+                                    try { comment.StickerURL = Driver.FindElement(By.XPath($"//div[@data-sigil='comment inline-reply' or @data-sigil='comment'][{n + 1}]/div[contains(@data-sigil, 'feed_story_ring')]/following-sibling::div[1]/div[2]/i[contains(@style, 'background-image')]")).GetCssValue("background-image").Replace("url(", "").Replace(")", "").Replace("\"", "").Replace("'", ""); }
+                                    catch (NoSuchElementException) { }
+                                }
+                                var elem_embed2 = elem_embed;
+                                if (!elem_embed2.Attributes.Contains("title")) elem_embed2 = elem_embed.SelectSingleNode("./div[@title]");
+                                if (elem_embed2 != null && elem_embed2.Attributes.Contains("title"))
+                                {
+                                    comment.EmbedTitle = elem_embed2.Attributes["title"].DeEntitizeValue;
+                                    comment.EmbedURL = elem_embed2.SelectSingleNode("./a").Attributes["href"].DeEntitizeValue;
+                                    if (comment.EmbedURL.StartsWith('/')) comment.EmbedURL = "https://m.facebook.com" + comment.EmbedURL;
+                                }
+                                var elem_attach = elem_embed.SelectSingleNode("./div[contains(@class, 'attachment')]/*");
+                                if (elem_attach != null)
+                                {
+                                    if (elem_attach.Name == "a" && elem_attach.Attributes.Contains("href") && (elem_attach.Attributes["href"].DeEntitizeValue.Contains("photo.php") || elem_attach.Attributes["href"].DeEntitizeValue.Contains("/photos/"))) comment.ImageURL = "https://m.facebook.com" + elem_attach.Attributes["href"].DeEntitizeValue;
+                                    if (elem_attach.Name == "div" && elem_attach.Attributes.Contains("data-store") && elem_attach.Attributes["data-store"].DeEntitizeValue.Contains("videoURL"))
+                                    {
+                                        dynamic data_store = JsonConvert.DeserializeObject(elem_attach.Attributes["data-store"].DeEntitizeValue);
+                                        if (data_store != null) comment.VideoURL = data_store.videoURL;
+                                    }
                                 }
                             }
+                            comments.Add(id, comment);
                         }
-                        comments.Add(id, comment);
-                    }
-                    FBComment cmt = comments[id];
-                    if (cmt.Parent == -1 && elem.Attributes["data-sigil"].DeEntitizeValue.Contains("inline-reply"))
-                    {
-                        /* This comment is a reply, now find its parent */
-                        var elem_parent = elem.SelectSingleNode("./ancestor::div[@data-sigil='comment']");
-                        cmt.Parent = Convert.ToInt64(elem_parent.Attributes["id"].DeEntitizeValue);
-                    }
+                        FBComment cmt = comments[id];
+                        if (cmt.Parent == -1 && elem.Attributes["data-sigil"].DeEntitizeValue.Contains("inline-reply"))
+                        {
+                            /* This comment is a reply, now find its parent */
+                            var elem_parent = elem.SelectSingleNode("./ancestor::div[@data-sigil='comment']");
+                            cmt.Parent = Convert.ToInt64(elem_parent.Attributes["id"].DeEntitizeValue);
+                        }
 
-                    n++;
-                    if (cb != null && cb(100 * ((float)n / (float)comment_elems.Count)) == false) return null;
+                        n++;
+                        if (cb != null && cb((100f / npass) * ((float)n / (float)comment_elems.Count + pn)) == false) return null;
+                    }
                 }
+                catch(NoSuchElementException) { }
+                
+                if (cookies != null) Cookies.Se_LoadCookies(Driver, cookies, "https://m.facebook.com"); // Log back in
             }
-            catch(NoSuchElementException) { }
-
             return comments;
         }
 
