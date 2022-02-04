@@ -24,18 +24,10 @@ namespace HRngBackend
         public string DriverPath { get; }
         public string TempFile { get; } = Path.GetTempFileName();
 
-        /*
-         * public FirefoxHelper([bool detect])
-         *   Class constructor. This locates existing Firefox
-         *   installations.
-         *   It is highly recommended that this class is constructed in a
-         *   try-catch structure to catch any exceptions from attempting to
-         *   create the base directory (e.g. IOException).
-         *   Input : detect: Whether to detect existing Firefox installations
-         *                   (optional).
-         *                   Enabled by default.
-         *   Output: none.
-         */
+        /// <summary>
+        ///  Class constructor. This locates existing Firefox installations. It is highly recommended that this class is constructed in a try-catch structure to catch any exceptions from attempting to create the base directory (e.g. IOException).
+        /// </summary>
+        /// <param name="detect">Whether to detect existing Firefox installations (optional). Enabled by default.</param>
         public FirefoxHelper(bool detect = true)
         {
             DriverPath = Path.Combine(BaseDir.PlatformBase, "geckodriver");
@@ -101,12 +93,9 @@ namespace HRngBackend
             }
         }
 
-        /*
-         * ~FirefoxHelper()
-         *   Class destructor. Used to delete the temporary file (as of now).
-         *   Input : none.
-         *   Output: none.
-         */
+        /// <summary>
+        ///  Class destructor. Used to delete the temporary file (as of now).
+        /// </summary>
         ~FirefoxHelper()
         {
             File.Delete(TempFile);

@@ -15,15 +15,12 @@ namespace HRngBackend
 {
     internal static class Versioning
     {
-        /*
-         * public int GetVersion(string version, int idx)
-         *   Retrieves the specified version index from a x.y.z.* version
-         *   string that can be retrieved from Chrome/ChromeDriver and
-         *   Firefox.
-         *   Input : version: The version string.
-         *           idx    : The version index.
-         *   Output: The version number, or -1 if the string is invalid.
-         */
+        /// <summary>
+        ///  Retrieves the specified version index from a x.y.z.* version string that can be retrieved from Chrome/ChromeDriver and Firefox.
+        /// </summary>
+        /// <param name="version">The version string.</param>
+        /// <param name="idx">The version index.</param>
+        /// <returns>The version number, or -1 if the string is invalid.</returns>
         public static int GetVersion(string version, int idx)
         {
             if (idx < 0) return -1;
@@ -32,26 +29,23 @@ namespace HRngBackend
             return Convert.ToInt32(components[idx]);
         }
 
-        /*
-         * public int GetMajorVersion(string version)
-         *   Retrieves the major version from a version string.
-         *   Input : version: The version string.
-         *   Output: The version number.
-         */
+        /// <summary>
+        ///  Retrieves the major version from a version string.
+        /// </summary>
+        /// <param name="version">The version string.</param>
+        /// <returns>The version number.</returns>
         public static int GetMajVersion(string version)
         {
             return GetVersion(version, 0);
         }
 
-        /*
-         * public int CompareVersion(string a, string b, [int max_idx])
-         *   Compares the two version strings a and b.
-         *   Input : a, b   : Version strings in x.y.z.* format.
-         *           max_idx: The maximum index to compare (optional).
-         *   Output: 0 if the two versions are the same, or the difference
-         *           between strings a and b's version where there's
-         *           mismatch (i.e. a[i] - b[i] if a[b] != b[i])
-         */
+        /// <summary>
+        ///  Compares the two version strings a and b.
+        /// </summary>
+        /// <param name="a">Version string in x.y.z.* format.</param>
+        /// <param name="b">Version string in x.y.z.* format.</param>
+        /// <param name="max_idx">The maximum index to compare (optional).</param>
+        /// <returns>0 if the two versions are the same, or the difference between strings a and b's version where there's mismatch (i.e. <c>a[i] - b[i]</c> if <c>a[b] != b[i]</c>)</returns>
         public static int CompareVersion(string a, string b, int max_idx = -1)
         {
             for (int i = 0; (max_idx < 0 || i <= max_idx); i++)
@@ -63,17 +57,12 @@ namespace HRngBackend
             return 0;
         }
 
-        /*
-         * public string ExecVersion(string path)
-         *   Retrieves the version of the specified executable.
-         *   On Windows, this function gets the executable's product
-         *   version. On other platforms, this functions returns the
-         *   last part (containing the version) of the output from
-         *   [executable path] --version.
-         *   Input : path: The path to the executable.
-         *   Output: The executable's version, or an empty string if
-         *           the file does not exist.
-         */
+        /// <summary>
+        ///  Retrieves the version of the specified executable.<br/>
+        ///  On Windows, this function gets the executable's product version. On other platforms, this functions returns the last part (containing the version) of the output from <c>[executable path] --version</c>.
+        /// </summary>
+        /// <param name="path">The path to the executable.</param>
+        /// <returns>The executable's version, or an empty string if the file does not exist.</returns>
         public static string ExecVersion(string path, int? idx = null)
         {
             if (!File.Exists(path)) return "";

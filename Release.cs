@@ -13,44 +13,40 @@ namespace HRngBackend
 {
     public class Release
     {
-        /*
-         * public string Version
-         *   The release's version number.
-         */
+        /// <summary>
+        ///  The release's version number.
+        /// </summary>
         public string Version = "";
 
-        /*
-         * public string DownloadURL
-         *   The release's download URL.
-         */
+        /// <summary>
+        ///  The release's download URL.
+        /// </summary>
         public string DownloadURL = "";
 
-        /*
-         * public string ChangelogURL
-         *   The release's changelog URL (optional).
-         */
+        /// <summary>
+        ///  The release's changelog URL (optional).
+        /// </summary>
         public string ChangelogURL = "";
 
-        /*
-         * public uint Update
-         *   Indicates whether the local browser/driver can be updated
-         *   to the release. Possible values are:
-         *    0 - not updatable (local version is the same or newer)
-         *    1 - can be updated
-         *    2 - must be updated (local version does not exist)
-         */
+        /// <summary>
+        ///  Indicates whether the local browser/driver can be updated to the release. Possible values are:
+        /// <list type="bullet">
+        ///  <item><description>0: not updatable (local version is the same or newer)</description></item>
+        ///  <item><description>1: can be updated</description></item>
+        ///  <item><description>2: must be updated (local version does not exist)</description></item>
+        /// </list>
+        /// </summary>
         public uint Update = 0;
 
-        /*
-         * public async Task<bool> Download(string destination, [Func<float, bool> cb])
-         *   Downloads the release.
-         *   Input : destination: Path to the file to which the release
-         *                        will be saved.
-         *           cb         : The download callback function (optional).
-         *                        For more details, refer to
-         *                        CommonHTTP.Download() function description.
-         *   Output: Output from CommonHTTP.Download().
-         */
+        /// <summary>
+        ///  Downloads the release.
+        /// </summary>
+        /// <param name="destination">Path to the file to which the release will be saved.</param>
+        /// <param name="cb">
+        ///  The download callback function (optional).<br/>
+        ///  For more details, refer to <c>CommonHTTP.Download()</c> function description.
+        /// </param>
+        /// <returns>Output from <c>CommonHTTP.Download()</c>.</returns>
         public async Task<bool> Download(string destination, Func<float, bool>?cb = null)
         {
             return await CommonHTTP.DownloadFile(DownloadURL, destination, cb);

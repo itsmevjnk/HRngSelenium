@@ -28,80 +28,74 @@ namespace HRngBackend
 {
     public class FBPost
     {
-        /*
-         * public long PostID
-         *   The Facebook post's ID. This is set by the initializer
-         *   below.
-         */
+        /// <summary>
+        ///  The Facebook post's ID. This is set by the initializer below.
+        /// </summary>
         public long PostID = -1;
 
-        /*
-         * public long AuthorID
-         *   The Facebook post author's user ID. This is set by the
-         *   initializer below.
-         *   This ID is needed for generating the comments URL
-         *   (story.php) reliably. Without it, certain types of posts
-         *   such as Facebook Watch videos will not load its comments.
-         */
+        /// <summary>
+        ///  The Facebook post author's user ID. This is set by the initializer below.<br/>
+        ///  This ID is needed for generating the comments URL (story.php) reliably. Without it, certain types of posts such as Facebook Watch videos will not load its comments.
+        /// </summary>
         public long AuthorID = -1;
 
-        /*
-         * public bool IsGroupPost
-         *   Whether this post is from a group. Group posts require
-         *   different handling in how the comments URL is constructed
-         *   (i.e. no AuthorID, or else the page will bug out)
-         */
+        /// <summary>
+        ///  Whether this post is from a group.<br/>
+        ///  Group posts require different handling in how the comments URL is constructed (i.e. no AuthorID, or else the page will bug out)
+        /// </summary>
         public bool IsGroupPost = false;
 
-        /*
-         * private IWebDriver Driver
-         *   The Selenium WebDriver instance associated with this post.
-         *   Do NOT share drivers across multiple posts concurrently;
-         *   Selenium WebDriver instances aren't by any means
-         *   thread-safe (even a single state change requires all nodes
-         *   to be re-fetched).
-         */
+        /// <summary>
+        ///  The Selenium WebDriver instance associated with this post.<br/>
+        ///  Do NOT share drivers across multiple posts concurrently; Selenium WebDriver instances aren't by any means thread-safe (even a single state change requires all nodes to be re-fetched).
+        /// </summary>
         private IWebDriver Driver = null;
 
-        /*
-         * public FBPost(IWebDriver driver)
-         *   Class constructor. Sets the WebDriver instance.
-         */
+        /// <summary>
+        ///  Class constructor. Sets the WebDriver instance.
+        /// </summary>
         public FBPost(IWebDriver driver)
         {
             Driver = driver;
         }
 
-        /*
-         * private async Task<long> GetUID(string url)
-         *   Drop-in replacement for UID.Get() which adds handling code
-         *   for cases where the account's URL is profile.php (which points
-         *   to the account being checked).
-         *   Input : same as UID.Get().
-         *   Output: same as UID.Get().
-         */
+        /// <summary>
+        ///  Drop-in replacement for UID.Get() which adds handling code for cases where the account's URL is profile.php (which points to the account being checked).
+        /// </summary>
+        /// <returns>Same as <c>UID.Get()</c>.</returns>
         private async Task<long> GetUID(string url)
         {
             if (url.Contains("profile.php") && !url.Contains("id=")) return FBLogin.GetUID(Driver); // The case we're looking for
             else return await UID.Get(url); // Attempt to get UID using UID.Get() as normal
         }
 
-        /*
-         * public async Task<int> Initialize(long id)
-         * public async Task<int> Initialize(string url)
-         *   Attempt to get the IDs of the post and its author.
-         *   Input : id : The post's ID.
-         *           url: The post's URL.
-         *   Output: 0 if the initialization is successful, or one
-         *           of these values on failure:
-         *            -1  Invalid URL
-         *            -2  Invalid webpage output (e.g. wrong URL,
-         *                ratelimited by Facebook, or not logged in)
-         */
+        /// <summary>
+        ///  Attempt to get the IDs of the post and its author.
+        /// </summary>
+        /// <param name="id">The post's ID.</param>
+        /// <returns>
+        ///  0 if the initialization is successful, or one of these values on failure:
+        ///  <list type="bullet">
+        ///   <item><description>-1: Invalid URL</description></item>
+        ///   <item><description>-2: Invalid webpage output (e.g. wrong URL, ratelimited by Facebook, or not logged in)</description></item>
+        ///  </list>
+        /// </returns>
         public async Task<int> Initialize(long id)
         {
             return await Initialize($"https://m.facebook.com/{id}");
         }
+
+        /// <summary>
+        ///  Attempt to get the IDs of the post and its author.
+        /// </summary>
+        /// <param name="url">The post's URL.</param>
+        /// <returns>
+        ///  0 if the initialization is successful, or one of these values on failure:
+        ///  <list type="bullet">
+        ///   <item><description>-1: Invalid URL</description></item>
+        ///   <item><description>-2: Invalid webpage output (e.g. wrong URL, ratelimited by Facebook, or not logged in)</description></item>
+        ///  </list>
+        /// </returns>
         public async Task<int> Initialize(string url)
         {
             if (url.Length == 0) return -1; // Return right away
@@ -233,30 +227,14 @@ namespace HRngBackend
             return 0;
         }
 
-        /*
-         * private int ClickAndWait(string click_xpath, [string check_xpath], [int delay], [IWebElement elem])
-         *   Helper function to click an element and wait for the
-         *   the AJAX request to finish. Useful for loading more
-         *   items.
-         *   Input : click_xpath: XPath pointing to the element to
-         *                        be clicked.
-         *           check_xpath: XPath pointing to the element that
-         *                        is present during the loading
-         *                        process (optional).
-         *                        By default, it's set to watch for
-         *                        any elements with the
-         *                        async_elem_saving class, which is
-         *                        good enough in most cases.
-         *           delay      : The interval in milliseconds to wait
-         *                        for after the checking is complete
-         *                        to let the new elements load.
-         *                        Defaults to 250ms.
-         *           elem       : The root element to perform on (optional).
-         *                        If not specified, the operation will
-         *                        be done on the root element.
-         *   Output: -1 if there's no element to click, or 0 if
-         *           the function succeeds.
-         */
+        /// <summary>
+        ///  Helper function to click an element and wait for the the AJAX request to finish. Useful for loading more items.
+        /// </summary>
+        /// <param name="click_xpath">XPath pointing to the element to be clicked.</param>
+        /// <param name="check_xpath">XPath pointing to the element that is present during the loading process (optional). By default, it's set to watch for any elements with the <c>async_elem_saving</c> class, which is good enough in most cases.</param>
+        /// <param name="delay">The interval in milliseconds to wait for after the checking is complete to let the new elements load. Defaults to 250ms.</param>
+        /// <param name="elem">The root element to perform on (optional). If not specified, the operation will be done on the root element.</param>
+        /// <returns>-1 if there's no element to click, or 0 if the function succeeds.</returns>
         private int ClickAndWait(string click_xpath, string check_xpath = "//*[contains(@class, 'async_elem_saving')]", int delay = 250, IWebElement elem = null)
         {
             while (true)
@@ -285,43 +263,26 @@ namespace HRngBackend
             return 0;
         }
 
-        /*
-         * public async Task<Dictionary<long, FBComment>> GetComments([Func<float, bool> cb],
-         *                                                            [bool muid], [bool p1], [bool p2])
-         *   Scrape all comments from the Facebook post.
-         *   Input : cb    : Callback function to be called when each
-         *                   comment has been saved (optional).
-         *                   This function takes the current percentage and
-         *                   returns true or false, depending on whether the
-         *                   user cancelled the operation.
-         *           muid  : Whether to retrieve UIDs of accounts mentioned
-         *                   in the comments (optional). Enabled by default,
-         *                   however, this can be disabled for speed
-         *                   improvements if this data is unnecessary.
-         *           p1, p2: Specifies whether which comments obtainment
-         *                   pass is performed.
-         *                   p1 (Pass 1) gets all comments with an account
-         *                   logged in. Due to Facebook's algorithms, this
-         *                   pass does not guarantee obtainment of all
-         *                   comments.
-         *                   p2 (Pass 2) gets all comments WITHOUT logging
-         *                   in any account. This will allow for the maximum
-         *                   number of comments to be obtained (except for 
-         *                   those from non-public accounts or those that
-         *                   Facebook's algorithms decide to hide). However,
-         *                   depending on the mentioned accounts' privacy
-         *                   settings, their UIDs/profile links may NOT be
-         *                   obtainable, in which case a decrementing number
-         *                   starting from -10 is used as the UID, and
-         *                   "Unknown <name shown in the comment> (<UID>)"
-         *                   is used as the profile link.
-         *                   By default, this function will perform Pass 1
-         *                   only. For the maximum amount of comments, Pass 2
-         *                   can be performed with Pass 1, but at a certain
-         *                   performance and bandwidth cost.
-         *   Output: a comment ID => FBComment instance dictionary, or null
-         *           if the function was cancelled.
-         */
+        /// <summary>
+        ///  Scrape all comments from the Facebook post.
+        /// </summary>
+        /// <param name="cb">
+        ///  Callback function to be called when each comment has been saved (optional).<br/>
+        ///  This function takes the current percentage and returns <c>true</c> or <c>false</c>, depending on whether the user cancelled the operation.
+        /// </param>
+        /// <param name="muid">
+        ///  Whether to retrieve UIDs of accounts mentioned in the comments (optional).<br/>
+        ///  Enabled by default, however, this can be disabled for speed improvements if this data is unnecessary.
+        /// </param>
+        /// <param name="p1">
+        ///  Whether to get all comments with an account logged in. Enabled by default.<br/>
+        ///  Due to Facebook's algorithms, this pass does not guarantee obtainment of all comments.
+        /// </param>
+        /// <param name="p2">
+        ///  Whether to get all comments WITHOUT logging in any account. Disabled by default.<br/>
+        ///  This will allow for the maximum number of comments to be obtained (except for those from non-public accounts or those that Facebook's algorithms decide to hide). However, depending on the mentioned accounts' privacy settings, their UIDs/profile links may NOT be obtainable, in which case a decrementing number starting from -10 is used as the UID, and <c>&lt;name shown in the comment&gt; (&lt;UID&gt;)</c> is used as the profile link.
+        /// </param>
+        /// <returns>A comment ID =&gt; FBComment instance dictionary, or <c>null</c> if the function was cancelled.</returns>
         public async Task<Dictionary<long, FBComment>> GetComments(Func<float, bool>? cb = null, bool muid = true, bool p1 = true, bool p2 = false)
         {
             Dictionary<long, FBComment> comments = new Dictionary<long, FBComment>();
@@ -409,7 +370,7 @@ namespace HRngBackend
                                         {
                                             if (elem_mention.Attributes["href"] == null)
                                             {
-                                                comment.Mentions_Handle.Add($"Unknown {elem_mention.InnerText} ({placeholder_cnt})");
+                                                comment.Mentions_Handle.Add($"{elem_mention.InnerText} ({placeholder_cnt})");
                                                 if (muid) comment.Mentions_UID.Add(placeholder_cnt);
                                                 placeholder_cnt--;
                                             }
@@ -475,17 +436,14 @@ namespace HRngBackend
             return comments;
         }
 
-        /*
-         * public async Task<Dictionary<long, FBReact>> GetReactions([Func<float, bool> cb])
-         *  Get all reactions to the post.
-         *   Input : cb: Callback function to be called when each
-         *               reaction has been saved (optional).
-         *               This function takes the current percentage and
-         *               returns true or false, depending on whether the
-         *               user cancelled the operation.
-         *   Output: an user ID => FBReact instance dictionary, or null
-         *           if the function is cancelled.
-         */
+        /// <summary>
+        ///  Get all reactions to the post.
+        /// </summary>
+        /// <param name="cb">
+        ///  Callback function to be called when each comment has been saved (optional).<br/>
+        ///  This function takes the current percentage and returns <c>true</c> or <c>false</c>, depending on whether the user cancelled the operation.
+        /// </param>
+        /// <returns>A user ID => FBReact instance dictionary, or <c>null</c> if the function is cancelled.</returns>
         public async Task<Dictionary<long, FBReact>> GetReactions(Func<float, bool>? cb = null)
         {
             Dictionary<long, FBReact> reactions = new Dictionary<long, FBReact>();
@@ -605,17 +563,14 @@ namespace HRngBackend
             return reactions;
         }
 
-        /*
-         * public async Task<Dictionary<long, string>> GetShares([Func<float, bool> cb])
-         *  Get the list of accounts that shared the post.
-         *   Input : cb: Callback function to be called when each
-         *               reaction has been saved (optional).
-         *               This function takes the current percentage and
-         *               returns true or false, depending on whether the
-         *               user cancelled the operation.
-         *   Output: an user ID => user name dictionary, or null if the
-         *           function is cancelled.
-         */
+        /// <summary>
+        ///  Get the list of accounts that shared the post.
+        /// </summary>
+        /// <param name="cb">
+        ///  Callback function to be called when each comment has been saved (optional).<br/>
+        ///  This function takes the current percentage and returns <c>true</c> or <c>false</c>, depending on whether the user cancelled the operation.
+        /// </param>
+        /// <returns>A user ID => user name dictionary, or <c>null</c> if the function is cancelled.</returns>
         public async Task<Dictionary<long, string>> GetShares(Func<float, bool>? cb = null)
         {
             Dictionary<long, string> shares = new Dictionary<long, string>();

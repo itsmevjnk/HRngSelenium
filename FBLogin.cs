@@ -13,13 +13,11 @@ namespace HRngBackend
 {
     public static class FBLogin
     {
-        /*
-         * public static bool VerifyLogin(IWebDriver driver)
-         *   Verify that a Facebook account has been successfully logged in
-         *   in the Selenium session.
-         *   Input : driver: The Selenium session to be checked.
-         *   Output: true if there's a logged in account, or false otherwise.
-         */
+        /// <summary>
+        ///  Verify that a Facebook account has been successfully logged in in the Selenium session.
+        /// </summary>
+        /// <param name="driver">The Selenium session to be checked.</param>
+        /// <returns><c>true</c> if there's a logged in account, or <c>false</c> otherwise.</returns>
         public static bool VerifyLogin(IWebDriver driver)
         {
             driver.Navigate().GoToUrl("https://m.facebook.com");
@@ -34,26 +32,26 @@ namespace HRngBackend
             return false;
         }
 
-        /*
-         * public static int Login(IWebDriver driver, string email, string password, [IDictionary<string, string> cookies])
-         *   Log into a Facebook account for a Selenium session and optionally
-         *   retrieve the resulting cookies.
-         *   Input : driver  : The driver instance for the Selenium browser
-         *                     session.
-         *           email   : The email address or phone number associated
-         *                     with the account.
-         *           password: The password associated with the account.
-         *           cookies : The string => string dictionary that will be
-         *                     used to store the resulting cookies (optional).
-         *   Output: 0 on success, or any of these failure results:
-         *            -1: Deformed login form
-         *            -2: Wrong credentials
-         *            -3: Two-factor authentication required. LoginOTP is
-         *                supposed to be called to enter the OTP or wait for
-         *                login approval from another device.
-         *            -4: Deformed checkpoint page (account is locked?)
-         *            -5: Facebook was already logged in
-         */
+        /// <summary>
+        ///  Log into a Facebook account for a Selenium session and optionally retrieve the resulting cookies.
+        /// </summary>
+        /// <param name="driver">The driver instance for the Selenium browser session.</param>
+        /// <param name="email">The email address or phone number associated with the account.</param>
+        /// <param name="password">The password associated with the account.</param>
+        /// <param name="cookies">The string =&gt; string dictionary that will be used to store the resulting cookies (optional).</param>
+        /// <returns>
+        ///  0 on success, or any of these failure results:
+        ///  <list type="bullet">
+        ///   <item><description>-1: Deformed login form</description></item>
+        ///   <item><description>-2: Wrong credentials</description></item>
+        ///   <item><description>
+        ///    -3: Two-factor authentication required.<br/>
+        ///    LoginOTP is supposed to be called to enter the OTP or wait for login approval from another device.
+        ///   </description></item>
+        ///   <item><description>-4: Deformed checkpoint page (account is locked?)</description></item>
+        ///   <item><description>-5: Facebook was already logged in</description></item>
+        ///  </list>
+        /// </returns>
         public static int Login(IWebDriver driver, string email, string password, IDictionary<string, string>? cookies = null)
         {
             if (VerifyLogin(driver))
@@ -119,30 +117,22 @@ namespace HRngBackend
             return 0;
         }
 
-        /*
-         * public static int LoginOTP(IWebDriver driver, [string otp], [IDictionary<string, string> cookies], [int timeout])
-         *   Perform two-factor authentication on the account being logged in
-         *   in a Selenium session.
-         *   Input : driver : The driver instance for the Selenium browser
-         *                    session.
-         *           otp    : The time-based one time password provided by
-         *                    a TOTP generator such as Google Authenticator
-         *                    or Twilio Authy for the account (optional).
-         *                    If this is not specified, the function will
-         *                    wait until the user has given login approval
-         *                    from another device.
-         *           cookies: The string => string dictionary that will be
-         *                    used to store the resulting cookies (optional).
-         *           timeout: The timeout duration of waiting for login
-         *                    approval from another device (optional). If
-         *                    this is not specified, or a negative value or
-         *                    0 was given, the function will wait indefinitely.
-         *   Output: 0 on success, or any of these failure results:
-         *            -1: Already logged in successfully (no 2FA required)
-         *            -2: Deformed checkpoint page
-         *            -3: Waiting timed out
-         *            -4: Wrong OTP
-         */
+        /// <summary>
+        ///  Perform two-factor authentication on the account being logged in in a Selenium session.
+        /// </summary>
+        /// <param name="driver">The driver instance for the Selenium browser session.</param>
+        /// <param name="otp">The time-based one time password provided by a TOTP generator such as Google Authenticator or Twilio Authy for the account (optional). If this is not specified, the function will wait until the user has given login approval from another device.</param>
+        /// <param name="cookies">The string =&gt; string dictionary that will be used to store the resulting cookies (optional).</param>
+        /// <param name="timeout">The timeout duration of waiting for login approval from another device (optional). If this is not specified, or a negative value or 0 was given, the function will wait indefinitely.</param>
+        /// <returns>
+        ///  0 on success, or any of these failure results:
+        ///  <list type="bullet">
+        ///   <item><description>-1: Already logged in successfully (no 2FA required)</description></item>
+        ///   <item><description>-2: Deformed checkpoint page</description></item>
+        ///   <item><description>-3: Waiting timed out</description></item>
+        ///   <item><description>-4: Wrong OTP</description></item>
+        ///  </list>
+        /// </returns>
         public static int LoginOTP(IWebDriver driver, string? otp = null, IDictionary<string, string>? cookies = null, int timeout = -1)
         {
             if (!driver.Url.StartsWith("https://m.facebook.com/login/checkpoint/") && !driver.Url.StartsWith("https://m.facebook.com/checkpoint/")) driver.Navigate().GoToUrl("https://m.facebook.com/login/checkpoint/");
@@ -229,16 +219,11 @@ namespace HRngBackend
             return 0;
         }
 
-        /*
-         * public static long GetUID(IWebDriver driver)
-         *   Get the user ID of the currently logged in user in a Selenium
-         *   session.
-         *   Input : driver : The driver instance for the Selenium session.
-         *            -- OR --
-         *           cookies: A string => string dictionary of cookies for
-         *                    Facebook.
-         *   Output: The logged in user's ID, or -1 if the operation fails.
-         */
+        /// <summary>
+        ///  Get the user ID of the currently logged in user in a Selenium session.
+        /// </summary>
+        /// <param name="driver">The driver instance for the Selenium session. </param>
+        /// <returns>The logged in user's ID, or -1 if the operation fails.</returns>
         public static long GetUID(IWebDriver driver)
         {
             foreach (var cookie in driver.Manage().Cookies.AllCookies)
@@ -247,6 +232,12 @@ namespace HRngBackend
             }
             return -1;
         }
+
+        /// <summary>
+        ///  Get the user ID of the currently logged in user in a Selenium session.
+        /// </summary>
+        /// <param name="cookies">A string =&gt; string dictionary of cookies for Facebook.</param>
+        /// <returns>The logged in user's ID, or -1 if the operation fails.</returns>
         public static long GetUID(IDictionary<string, string> cookies)
         {
             if (cookies.ContainsKey("c_user")) return Convert.ToInt64(cookies["c_user"]);

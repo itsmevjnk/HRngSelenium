@@ -15,34 +15,29 @@ namespace HRngBackend
 {
     public static class SevenZip
     {
-        /*
-         * public string BinaryPath
-         *   Path to the 7za binary.
-         */
+        /// <summary>
+        ///  Path to the 7za binary.
+        /// </summary>
         public static string BinaryPath = Path.Combine(BaseDir.PlatformBase, "7za" + ((RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) ? ".exe" : ""));
 
-        /*
-         * public static bool Exists()
-         *   Checks if 7za exists.
-         *   Input : none.
-         *   Output: true if 7za exists, or false otherwise.
-         */
+        /// <summary>
+        ///  Checks if 7za exists.
+        /// </summary>
+        /// <returns><c>true</c> if 7za exists, or <c>false</c> otherwise.</returns>
         public static bool Exists()
         {
             return File.Exists(BinaryPath);
         }
 
-        /*
-         * public static async Task<bool> Initialize([Func<bool> consent])
-         *   Checks if 7za exists, and downloads it if it doesn't
-         *   exist. This function should only be called once by the
-         *   frontend during its initialization sequence.
-         *   Input : consent: The function to ask for user's consent
-         *                    to download 7za. Returns true if the
-         *                    user allows, or false otherwise.
-         *   Output: true if the initialization is successful, or
-         *           false otherwise.
-         */
+        /// <summary>
+        ///  Checks if 7za exists, and downloads it if it doesn't exist.<br/>
+        ///  This function should only be called once by the frontend during its initialization sequence.
+        /// </summary>
+        /// <param name="consent">
+        ///  The function to ask for user's consent to download 7za.<br/>
+        ///  Returns <c>true</c> if the user allows 7za to be downloaded, or <c>false</c> otherwise.
+        /// </param>
+        /// <returns><c>true</c> if the initialization is successful, or <c>false</c> otherwise.</returns>
 #nullable enable
         public static async Task<bool> Initialize(Func<bool>? consent = null)
         {
@@ -91,21 +86,14 @@ namespace HRngBackend
             return true;
         }
 
-        /*
-         * public static async Task<int> Extract(string archive, [string? output_dir],
-         *                                [string[] files], [bool overwrite])
-         *   Extracts an archive using 7za.
-         *   Input : archive   : The archive to be extracted.
-         *           output_dir: The directory to extract to (optional).
-         *           files     : The list of files to extract (optional).
-         *                       If this argument is not specified or is
-         *                       empty, all files will be extracted.
-         *           overwrite : Whether 7za can overwrite existing files
-         *                       (optional). If this argument is not specified,
-         *                       7za will overwrite existing files.
-         *   Output: -999 if the 7za binary does not exist, or the return value
-         *           from 7za.
-         */
+        /// <summary>
+        ///  Extracts an archive using 7za.
+        /// </summary>
+        /// <param name="archive">The archive to be extracted.</param>
+        /// <param name="output_dir">The directory to extract to (optional).</param>
+        /// <param name="files">The list of files to extract (optional). If this argument is not specified or is empty, all files will be extracted.</param>
+        /// <param name="overwrite">Whether 7za can overwrite existing files (optional). If this argument is not specified, 7za will overwrite existing files.</param>
+        /// <returns>-999 if the 7za binary does not exist, or the return value from 7za.</returns>
         public static async Task<int> Extract(string archive, string? output_dir = null, string[]? files = null, bool overwrite = true)
         {
             files = files ?? new string[0];
