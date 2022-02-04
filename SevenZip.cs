@@ -38,6 +38,7 @@ namespace HRngBackend
         ///  Returns <c>true</c> if the user allows 7za to be downloaded, or <c>false</c> otherwise.
         /// </param>
         /// <returns><c>true</c> if the initialization is successful, or <c>false</c> otherwise.</returns>
+        /// <exception cref="NotSupportedException">Thrown if 7za is not available for the running OS/architecture.</exception>
 #nullable enable
         public static async Task<bool> Initialize(Func<bool>? consent = null)
         {
@@ -50,7 +51,7 @@ namespace HRngBackend
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) url += "win/";
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) url += "mac/";
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) url += "linux/";
-                else throw new InvalidOperationException("7za is not available for the running OS");
+                else throw new NotSupportedException("7za is not available for the running OS");
 
                 switch (RuntimeInformation.OSArchitecture)
                 {
@@ -58,7 +59,7 @@ namespace HRngBackend
                     case Architecture.X64: url += "x64/"; break;
                     case Architecture.Arm: url += "arm/"; break;
                     case Architecture.Arm64: url += "arm64/"; break;
-                    default: throw new InvalidOperationException($"7za is not available for the running architecture ({Convert.ToString(RuntimeInformation.OSArchitecture)})");
+                    default: throw new NotSupportedException($"7za is not available for the running architecture ({Convert.ToString(RuntimeInformation.OSArchitecture)})");
                 }
 
                 url += "7za";

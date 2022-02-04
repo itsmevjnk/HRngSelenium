@@ -137,7 +137,7 @@ namespace HRngBackend
                         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) url += "osx";
                         break;
                 }
-                if (url.EndsWith("&os=")) throw new Exception("Mozilla Firefox is not available for this OS/architecture");
+                if (url.EndsWith("&os=")) throw new NotSupportedException("Mozilla Firefox is not available for this OS/architecture");
                 var resp = await CommonHTTP.Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
                 resp.EnsureSuccessStatusCode();
                 var resp_uri = resp.RequestMessage.RequestUri; // Get the redirected URI
@@ -185,7 +185,7 @@ namespace HRngBackend
                         break;
                     }
                 }
-                if (gdver == "") throw new Exception($"No suitable GeckoDriver version found for Firefox {major}");
+                if (gdver == "") throw new NotSupportedException($"No suitable GeckoDriver version found for Firefox {major}");
 
                 Dictionary<string, string> combo_map = new Dictionary<string, string> {
                     { "Windows.X86", "win32.zip" },

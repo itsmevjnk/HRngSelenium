@@ -45,7 +45,7 @@ namespace HRngBackend
         ///  The space-split substring index containing the version number (optional).<br/>
         ///  For example, for &lt;BrowserDriver&gt; 10.0.xxxx.yy (...) the index would be 1.
         /// </param>
-        /// <returns>String containing the browser version, or an empty string if the function fails.</returns>
+        /// <returns>A string containing the browser version, or an empty string if the function fails.</returns>
         public string LocalVersion(string? path = null, int? idx = null);
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace HRngBackend
         ///  With the optional <c>path</c> argument, this function can also be used for any driver executable.
         /// </summary>
         /// <param name="path">Path to the driver executable (optional).</param>
-        /// <returns>String containing the driver version, or an empty string if the function fails.</returns>
+        /// <returns>A string containing the driver version, or an empty string if the function fails.</returns>
         public string LocalDriverVersion(string? path = null);
 
         /// <summary>
@@ -61,6 +61,7 @@ namespace HRngBackend
         ///  This function is asynchronous.
         /// </summary>
         /// <returns>The latest stable/LTS browser release available.</returns>
+        /// <exception cref="NotSupportedException">Thrown if the running platform is not supported by the browser.</exception>
         public Task<Release> LatestRelease();
 
         /// <summary>
@@ -69,6 +70,7 @@ namespace HRngBackend
         /// </summary>
         /// <param name="version">The browser version string.</param>
         /// <returns>A Release class containing the driver release.</returns>
+        /// <exception cref="NotSupportedException">Thrown if a suitable driver cannot be found.</exception>
         public Task<Release> LatestDriverRelease(string version);
 
         /// <summary>

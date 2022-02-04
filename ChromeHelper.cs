@@ -166,7 +166,7 @@ namespace HRngBackend
                         case Architecture.X64: repo = "Hibbiki/chromium-win64"; break;
                         case Architecture.X86: repo = "Hibbiki/chromium-win32"; break;
                         /* TODO: Add ARM64 */
-                        default: throw new InvalidOperationException($"Chromium for Windows is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})");
+                        default: throw new NotSupportedException($"Chromium for Windows is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})");
                     }
                     var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/{repo}/releases/latest");
                     resp.EnsureSuccessStatusCode();
@@ -178,7 +178,7 @@ namespace HRngBackend
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new InvalidOperationException($"Chromium for macOS is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
+                    if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new NotSupportedException($"Chromium for macOS is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
                     var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/macchrome/macstable/releases/latest");
                     resp.EnsureSuccessStatusCode();
                     dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
@@ -189,7 +189,7 @@ namespace HRngBackend
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new InvalidOperationException($"Chromium for Linux is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
+                    if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new NotSupportedException($"Chromium for Linux is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
                     var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/macchrome/linchrome/releases/latest");
                     resp.EnsureSuccessStatusCode();
                     dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
@@ -205,7 +205,7 @@ namespace HRngBackend
                         }
                     }
                 }
-                else throw new InvalidOperationException("Chromium is not available for this operating system");
+                else throw new NotSupportedException("Chromium is not available for this operating system");
                 if (release.Update != 2 && !BrowserInst && Versioning.CompareVersion(release.Version, LocalVersion()) > 0) release.Update = 1;
                 return release;
             }
@@ -225,7 +225,7 @@ namespace HRngBackend
 
                 /* Get ChromeDriver version */
                 string cdver = "";
-                if (major < 42) throw new Exception($"No information on ChromeDriver version for Chrome {version}");
+                if (major < 42) throw new NotSupportedException($"No information on ChromeDriver version for Chrome {version}");
                 else if (major < 70)
                 {
                     /* TODO: Tidy up this mess */
