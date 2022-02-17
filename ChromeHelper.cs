@@ -33,8 +33,6 @@ namespace HRngBackend
         {
             DriverPath = Path.Combine(BaseDir.PlatformBase, "chromedriver");
 
-            CommonHTTP.Client.DefaultRequestHeaders.Add("User-Agent", UserAgent.Next()); // We have to do this so that GitHub is happy
-
             /* Attempt to find existing Google Chrome installation */
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
