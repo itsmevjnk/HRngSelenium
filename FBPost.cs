@@ -24,7 +24,9 @@ using OpenQA.Selenium;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 
-namespace HRngBackend
+using HRngBackend;
+
+namespace HRngSelenium
 {
     public class FBPost : IFBPost
     {
@@ -245,8 +247,8 @@ namespace HRngBackend
                 Dictionary<string, string> cookies = null;
                 if (pass == 2) {
                     /* Back up cookies, then log out by deleting all cookies */
-                    cookies = Cookies.Se_SaveCookies(Driver);
-                    Cookies.Se_ClearCookies(Driver);
+                    cookies = SeCookies.SaveCookies(Driver);
+                    SeCookies.ClearCookies(Driver);
                     Driver.Navigate().Refresh(); // Refresh so we end up being logged out
 
                     /* Remove login popup */
@@ -379,7 +381,7 @@ namespace HRngBackend
                 }
                 catch(NoSuchElementException) { }
                 
-                if (cookies != null) Cookies.Se_LoadCookies(Driver, cookies, "https://m.facebook.com"); // Log back in
+                if (cookies != null) SeCookies.LoadCookies(Driver, cookies, "https://m.facebook.com"); // Log back in
             }
             return comments;
         }

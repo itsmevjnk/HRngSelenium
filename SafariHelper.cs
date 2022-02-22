@@ -19,7 +19,9 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 
-namespace HRngBackend
+using HRngBackend;
+
+namespace HRngSelenium
 {
     public class SafariHelper : IBrowserHelper
     {

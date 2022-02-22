@@ -11,7 +11,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
-namespace HRngBackend
+namespace HRngSelenium
 {
     internal static class Versioning
     {

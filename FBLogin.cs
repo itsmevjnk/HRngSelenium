@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using OpenQA.Selenium;
 
-namespace HRngBackend
+namespace HRngSelenium
 {
     public static class FBLogin
     {

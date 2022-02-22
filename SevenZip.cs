@@ -11,7 +11,9 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace HRngBackend
+using HRngBackend;
+
+namespace HRngSelenium
 {
     public static class SevenZip
     {

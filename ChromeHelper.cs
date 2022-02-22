@@ -15,7 +15,9 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace HRngBackend
+using HRngBackend;
+
+namespace HRngSelenium
 {
     public class ChromeHelper : IBrowserHelper
     {

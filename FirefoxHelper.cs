@@ -14,7 +14,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HRngBackend
+using HRngBackend;
+
+namespace HRngSelenium
 {
     public class FirefoxHelper : IBrowserHelper
     {
@@ -297,6 +299,14 @@ namespace HRngBackend
                 }
                 else if (driver.Update == 2) return -1;
             }
+
+            string path = Path.Combine(BaseDir.PlatformBase, "firefox", "imgblock.xpi");
+            if (!File.Exists(path))
+            {
+                /* (Re)download the image block extension. We might want to also do some integrity checking on the existing extension to see if it has been corrupted or tampered with. */
+                await CommonHTTP.DownloadFile("https://github.com/itsmevjnk/FFImageBlocker/releases/download/v0.1.0/ffimageblocker-0.1.0-an+fx.xpi", path);
+            }
+
             return 0;
         }
 
@@ -310,7 +320,7 @@ namespace HRngBackend
             if (verbose) browser.LogLevel = 0; // Set log level to TRACE
             if (headless) browser.AddArgument("-headless");
             var ret = new FirefoxDriver(driver, browser, Timeout.InfiniteTimeSpan);
-            if (no_img) ret.InstallAddOn(Convert.ToBase64String(Properties.Resources.FFImageBlocker)); // Undocumented function (why?), but this is the only way that this will work. Plus, this will not require the add on to be copied to a file, which is a win ;)
+            if (no_img) ret.InstallAddOnFromFile(Path.Combine(BaseDir.PlatformBase, "firefox", "imgblock.xpi")); // Undocumented function (why?), but this is the only way that this will work.
             return ret;
         }
     }
