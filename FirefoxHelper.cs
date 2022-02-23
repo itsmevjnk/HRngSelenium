@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 using HRngBackend;
 
@@ -63,7 +64,7 @@ namespace HRngSelenium
                 }
 
                 /* Cannot find local installation */
-                string[] path_array = { BaseDir.PlatformBase, "firefox", "Firefox.app", "Contents", "MacOS", "firefox" };
+                string[] path_array = { BaseDir.PlatformBase, "Firefox.app", "Contents", "MacOS", "firefox" };
                 BrowserInst = false; BrowserPath = Path.Combine(path_array);
             }
             else
@@ -264,9 +265,22 @@ namespace HRngSelenium
                         }
                         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                         {
-                            /* For macOS, Firefox is distributed as a DMG image, but fortunately that can also be extracted with 7-Zip */
-                            await SevenZip.Extract(TempFile, BaseDir.PlatformBase, new string[] { "Firefox/Firefox.app" });
-                            Directory.Move(Path.Combine(BaseDir.PlatformBase, "Firefox"), Path.Combine(BaseDir.PlatformBase, "firefox")); // Safety measure, in case the FS is case sensitive
+                            /* For macOS, Firefox is distributed as a DMG image, so we have to use hdiutil to mount and extract the app */
+                            var mounts = await HDIUtil.Attach(TempFile, true); // Verifying takes too long
+                            string mntpath = mounts.First(mount => mount.mntpoint.StartsWith("/Volumes/Firefox")).mntpoint;
+                            /* Dear Microsoft, can we have a native folder copy method (e.g. Directory.Copy())? */
+                            using (System.Diagnostics.Process cp = new System.Diagnostics.Process())
+                            {
+                                cp.StartInfo.FileName = "cp";
+                                cp.StartInfo.Arguments = $"-rp \"{Path.Combine(mntpath, "Firefox.app")}\" \"{Path.Combine(BaseDir.PlatformBase, "Firefox.app")}\"";
+                                cp.StartInfo.CreateNoWindow = true;
+                                cp.StartInfo.UseShellExecute = false;
+                                cp.StartInfo.RedirectStandardOutput = true;
+                                cp.Start();
+                                await cp.StandardOutput.ReadToEndAsync();
+                                await cp.WaitForExitAsync();
+                            }
+                            await HDIUtil.Detach(mntpath);
                         }
                         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                         {
@@ -295,12 +309,23 @@ namespace HRngSelenium
                         string tar_path = Path.Combine(BaseDir.PlatformBase, Path.GetFileNameWithoutExtension(TempFile));
                         await SevenZip.Extract(tar_path, BaseDir.PlatformBase);
                         File.Delete(tar_path);
+
+                        /* Make sure that GeckoDriver is executable */
+                        System.Diagnostics.Process chmod = new System.Diagnostics.Process();
+                        chmod.StartInfo.FileName = "chmod";
+                        chmod.StartInfo.Arguments = $"+x {DriverPath}";
+                        chmod.StartInfo.UseShellExecute = false;
+                        chmod.StartInfo.RedirectStandardOutput = true;
+                        chmod.StartInfo.CreateNoWindow = true;
+                        chmod.Start();
+                        chmod.StandardOutput.ReadToEnd();
+                        chmod.WaitForExit();
                     }
                 }
                 else if (driver.Update == 2) return -1;
             }
 
-            string path = Path.Combine(BaseDir.PlatformBase, "firefox", "imgblock.xpi");
+            string path = Path.Combine(BaseDir.PlatformBase, "imgblock.xpi");
             if (!File.Exists(path))
             {
                 /* (Re)download the image block extension. We might want to also do some integrity checking on the existing extension to see if it has been corrupted or tampered with. */
@@ -320,7 +345,7 @@ namespace HRngSelenium
             if (verbose) browser.LogLevel = 0; // Set log level to TRACE
             if (headless) browser.AddArgument("-headless");
             var ret = new FirefoxDriver(driver, browser, Timeout.InfiniteTimeSpan);
-            if (no_img) ret.InstallAddOnFromFile(Path.Combine(BaseDir.PlatformBase, "firefox", "imgblock.xpi")); // Undocumented function (why?), but this is the only way that this will work.
+            if (no_img) ret.InstallAddOnFromFile(Path.Combine(BaseDir.PlatformBase, "imgblock.xpi")); // Undocumented function (why?), but this is the only way that this will work.
             return ret;
         }
     }
