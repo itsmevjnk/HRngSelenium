@@ -10,11 +10,7 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Safari;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
@@ -23,6 +19,7 @@ using HRngBackend;
 
 namespace HRngSelenium
 {
+    [System.Runtime.Versioning.SupportedOSPlatform("osx")] // TODO: Is this the correct platform name for macOS?
     public class SafariHelper : IBrowserHelper
     {
         /* Properties specified in the IBrowserHelper interface */
@@ -33,7 +30,6 @@ namespace HRngSelenium
 
         /* Functions specified in the IBrowserHelper interface */
 
-        [System.Runtime.Versioning.SupportedOSPlatform("osx")] // TODO: Is this the correct platform name for macOS?
         public string LocalVersion(string? path = null, int? idx = null)
         {
             /* Safari binaries require a bit more handling */
@@ -49,7 +45,6 @@ namespace HRngSelenium
             return output;
         }
 
-        [System.Runtime.Versioning.SupportedOSPlatform("osx")]
         public string LocalDriverVersion(string? path = null)
         {
             /* SafariDriver binaries require a bit more handling */
@@ -69,7 +64,6 @@ namespace HRngSelenium
         ///  Unused method for SafariHelper, do not use.
         /// </summary>
         /// <returns><c>null</c>.</returns>
-        [System.Runtime.Versioning.SupportedOSPlatform("osx")]
         public async Task<Release> LatestRelease()
         {
             return null;
@@ -93,13 +87,11 @@ namespace HRngSelenium
         /// <param name="release">Ignored.</param>
         /// <param name="cb">Ignored.</param>
         /// <returns>0</returns>
-        [System.Runtime.Versioning.SupportedOSPlatform("osx")]
         public async Task<int> Update(Func<Release, bool>? consent = null, Release? release = null, Func<float, bool>? cb = null)
         {
             return 0;
         }
         
-        [System.Runtime.Versioning.SupportedOSPlatform("osx")]
         public IWebDriver InitializeSelenium(bool no_console = true, bool verbose = false, bool no_log = false, bool headless = true, bool no_img = true)
         {
             SafariDriverService driver = SafariDriverService.CreateDefaultService(Path.GetDirectoryName(DriverPath), Path.GetFileName(DriverPath));
