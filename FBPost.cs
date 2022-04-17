@@ -1,8 +1,5 @@
 ﻿/*
  * FBPost.cs - Functions for gathering information on Facebook posts.
- *             Contrary to the old HRng which is Selenium-based,
- *             this rewritten version will **only** use HttpClient
- *             for all of its operations.
  *             If any of HRng's main function fails, this file is
  *             the first place to check, as Facebook seems to change
  *             how their mobile (m.facebook.com) website work randomly,
