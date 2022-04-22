@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Threading;
 using OpenQA.Selenium;
 
+using HRngBackend;
+
 namespace HRngSelenium
 {
     public static class FBLogin
@@ -105,12 +107,14 @@ namespace HRngSelenium
                 while (driver.Url == url) Thread.Sleep(10); // More waiting
             }
 
-            if (cookies != null)
+            /* Get cookies */
+            CommonHTTP.ClearCookies("facebook.com");
+            foreach (var cookie in driver.Manage().Cookies.AllCookies)
             {
-                /* Get cookies */
-                foreach (var cookie in driver.Manage().Cookies.AllCookies)
+                if (cookie.Domain.Contains("facebook.com"))
                 {
-                    if (!cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
+                    CommonHTTP.AddCookie("facebook.com", cookie.Name, cookie.Value); // Load cookie to CommonHTTP
+                    if (cookies != null && !cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
                 }
             }
 
@@ -207,12 +211,14 @@ namespace HRngSelenium
                 }
             }
 
-            if (cookies != null)
+            /* Get cookies */
+            CommonHTTP.ClearCookies("facebook.com");
+            foreach (var cookie in driver.Manage().Cookies.AllCookies)
             {
-                /* Get cookies */
-                foreach (var cookie in driver.Manage().Cookies.AllCookies)
+                if (cookie.Domain.Contains("facebook.com"))
                 {
-                    if (!cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
+                    CommonHTTP.AddCookie("facebook.com", cookie.Name, cookie.Value); // Load cookie to CommonHTTP
+                    if (cookies != null && !cookies.ContainsKey(cookie.Name)) cookies.Add(cookie.Name, cookie.Value);
                 }
             }
 
