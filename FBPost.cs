@@ -169,13 +169,6 @@ namespace HRngSelenium
 
             /* Get post ID */
             PostID = -1;
-            /* Attempt to get directly from URL */
-            if (IsGroupPost && uri_segments[uri_segments.IndexOf("permalink") + 1].All(char.IsDigit)) AuthorID = Convert.ToInt64(uri_segments[uri_segments.IndexOf("permalink") + 1]);
-            else
-            {
-                var url_params = HttpUtility.ParseQueryString(driver_uri.Query);
-                if (url_params.Get("story_fbid") != null) PostID = Convert.ToInt64(url_params.Get("story_fbid"));
-            }
             /* Attempt to get from post container (not working with images) */
             if (PostID < 0)
             {
