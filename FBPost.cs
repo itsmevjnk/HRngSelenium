@@ -345,15 +345,6 @@ namespace HRngSelenium
             /* Load reactions page */
             Driver.Navigate().GoToUrl($"https://m.facebook.com/ufi/reaction/profile/browser/?ft_ent_identifier={PostID}");
 
-            /* Get background-image + background-position => reaction type mapping */
-            Dictionary<string, int> react_map = new Dictionary<string, int>(); // Having string as key instead of tuple should result in better performance
-            foreach(var elem in Driver.FindElements(By.XPath("//span[@data-sigil='reaction_profile_sigil' and not(contains(@data-store, 'all'))]")))
-            {
-                var elem_img = elem.FindElement(By.XPath(".//i"));
-                dynamic data_store = JsonConvert.DeserializeObject(elem.GetAttribute("data-store"));
-                react_map.Add($"{elem_img.GetCssValue("background-image")} {elem_img.GetCssValue("background-position")}", Convert.ToInt32(data_store.reactionType));
-            }
-
             /* As it turns out, Facebook conveniently provides us with a perfectly ordered list of shown users' IDs in the AJAX URL, so we can use that to speedrun the UID retrieval process */
             List<long> shown_users = new List<long>(); // Where we'll save the IDs
             string prev_shown = ""; // Facebook stacks the new page's shown users before the previous pages' shown users, so we'll have to save the previous shown users list to filter out
@@ -441,9 +432,8 @@ namespace HRngSelenium
                     reaction.UserID = uid;
                     reaction.UserName = elem.SelectSingleNode(".//strong").InnerText;
 
-                    /* Get reaction type - for this we'll have to go back to Selenium for its CSS capabilities */
-                    var elem_type = Driver.FindElement(By.XPath($"//div[@id='reaction_profile_browser']/div[{n + 1}]/i"));
-                    reaction.Reaction = (ReactionEnum) react_map[$"{elem_type.GetCssValue("background-image")} {elem_type.GetCssValue("background-position")}"];
+                    /* Get reaction type */
+                    reaction.Reaction = FBReactUtil.GetReaction(elem.SelectSingleNode("./i"));
 
                     /* Save reaction */
                     reactions.Remove(uid); // Remove previous reaction if it even exists
