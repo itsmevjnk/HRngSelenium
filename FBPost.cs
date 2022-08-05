@@ -175,49 +175,11 @@ namespace HRngSelenium
                 try
                 {
                     dynamic data_ft = JsonConvert.DeserializeObject(Driver.FindElement(By.XPath("//div[contains(@data-ft, 'top_level_post_id')]")).GetAttribute("data-ft"));
-                    if (data_ft != null) AuthorID = Convert.ToInt64(data_ft.top_level_post_id);
+                    if (data_ft != null) PostID = Convert.ToInt64(data_ft.top_level_post_id);
                 }
                 catch (NoSuchElementException) { }
             }
-            /* Attempt to get from react button */
-            if (PostID < 0)
-            {
-                try
-                {
-                    dynamic data_store = JsonConvert.DeserializeObject(Driver.FindElement(By.XPath("//div[contains(@data-store, 'feedbackTarget'])")).GetAttribute("data-store"));
-                    if (data_store != null) PostID = Convert.ToInt64(data_store.feedbackTarget);
-                }
-                catch (NoSuchElementException) { }
-            }
-            /* Attempt to get from comment button */
-            if (PostID < 0)
-            {
-                try
-                {
-                    dynamic data_store = JsonConvert.DeserializeObject(Driver.FindElement(By.XPath("//div[contains(@data-store, 'click_comment_ufi'])")).GetAttribute("data-store"));
-                    if (data_store != null) PostID = Convert.ToInt64(data_store.target_id);
-                }
-                catch (NoSuchElementException) { }
-            }
-            /* Attempt to get from comment button, ONLY IF THIS IS NOT A FACEBOOK WATCH POST PAGE (turns out Facebook Watch got its own post ID system) */
-            if (PostID < 0 && !uri_segments.Contains("watch"))
-            {
-                try
-                {
-                    dynamic data_store = JsonConvert.DeserializeObject(Driver.FindElement(By.XPath("//div[contains(@data-store, 'click_share_ufi'])")).GetAttribute("data-store"));
-                    if (data_store != null) PostID = Convert.ToInt64(data_store.target_id);
-                }
-                catch (NoSuchElementException) { }
-            }
-            /* Attempt to get from comment section */
-            if (PostID < 0)
-            {
-                try
-                {
-                    PostID = Convert.ToInt64(Driver.FindElement(By.XPath("//div[starts-with(@id, 'ufi_')]")).GetAttribute("id").Replace("ufi_", ""));
-                }
-                catch (NoSuchElementException) { }
-            }
+            /* Thanks to Facebook's new encrypted pfbid system, there are no other ways of retrieving the post ID (yet) */
             if (PostID < 0) return -2;
 
             return 0;
