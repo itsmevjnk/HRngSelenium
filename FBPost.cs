@@ -357,7 +357,8 @@ namespace HRngSelenium
                     if (prev_shown.Length > 0) shown = shown.Replace(prev_shown, "");
                     foreach (string uid in shown.Split(',', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        shown_users.Add(Convert.ToInt64(uid));
+                        long uid_long = Convert.ToInt64(uid);
+                        if (!shown_users.Contains(uid_long)) shown_users.Add(uid_long);
                     }
                     prev_shown = "," + shown + ((prev_shown.Length > 0) ? "," : "") + prev_shown;
                     ClickAndWait("//div[@id='reaction_profile_pager']");
