@@ -90,7 +90,7 @@ namespace HRngSelenium
                 }
 
                 /* Cannot find local installation */
-                string[] path_array = { BaseDir.PlatformBase, "chrome", "Chromium.app", "Contents", "MacOS", "Chromium" };
+                string[] path_array = { BaseDir.PlatformBase, "chrome", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing" };
                 BrowserInst = false; BrowserPath = Path.Combine(path_array);
             }
             else
@@ -152,60 +152,57 @@ namespace HRngSelenium
             return Versioning.ExecVersion(path ?? DriverPath, 1);
         }
 
+        /// <summary>
+        ///  OSCombo to platform mapping for Chrome/ChromeDriver versions starting from 115.
+        /// </summary>
+        private Dictionary<string, string> Chrome115ComboMap = new Dictionary<string, string>
+        {
+            { "Windows.X86", "win32" },
+            { "Windows.X64", "win64" },
+            { "Linux.X64", "linux64" }, // There are probably no Chrome 115+ builds for x86 Linux
+            { "OSX.X64", "mac-x64" }, // There are DEFINITELY no Chrome 115+ builds for x86 Mac OS X
+            { "OSX.Arm64", "mac-arm64" }
+        };
+
         public async Task<Release> LatestRelease()
         {
             try
             {
                 Release release = new Release();
                 if (!File.Exists(BrowserPath)) release.Update = 2; // Force update
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+
+                /* Retrieve latest stable Chrome version available for our OS */
+                Dictionary<string, string> os_map = new Dictionary<string, string>
                 {
-                    string repo = ""; // GitHub repo for Chromium releases for this platform
-                    switch (RuntimeInformation.OSArchitecture)
+                    { "Windows.X86", "Win32" },
+                    { "Windows.X64", "Windows" },
+                    { "Linux.X64", "Linux" }, // There are probably no Chrome 115+ builds for x86 Linux
+                    { "OSX.X64", "Mac" }, // There are DEFINITELY no Chrome 115+ builds for x86 Mac OS X
+                    { "OSX.Arm64", "Mac" }
+                };
+                var resp_latest_ver = await CommonHTTP.Client.GetAsync($"https://chromiumdash.appspot.com/fetch_releases?channel=Stable&num=1&platform={os_map[OSCombo.Combo]}");
+                resp_latest_ver.EnsureSuccessStatusCode();
+                dynamic latest_vers = JsonConvert.DeserializeObject(await resp_latest_ver.Content.ReadAsStringAsync());
+                if (latest_vers.Count == 0) throw new NotSupportedException($"There are no Chrome versions available for the OS combo {OSCombo.Combo} ({os_map[OSCombo.Combo]})");
+                release.Version = ((string)latest_vers[0].version).Trim();
+
+                /* Retrieve download link. In practice, we can shortcut this by generating our own download URLs, but doing this is safer in case the host changes. */
+                var resp_dash = await CommonHTTP.Client.GetAsync("https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json");
+                resp_dash.EnsureSuccessStatusCode();
+                dynamic versions = ((dynamic)JsonConvert.DeserializeObject(await resp_dash.Content.ReadAsStringAsync())).versions;
+                for (int i = versions.Count - 1; i >= 0; i--) // Iterate backwards as the versions list are arranged in ascending order
+                {
+                    if (versions[i].version == release.Version)
                     {
-                        case Architecture.X64: repo = "Hibbiki/chromium-win64"; break;
-                        case Architecture.X86: repo = "Hibbiki/chromium-win32"; break;
-                        /* TODO: Add ARM64 */
-                        default: throw new NotSupportedException($"Chromium for Windows is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})");
-                    }
-                    var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/{repo}/releases/latest");
-                    resp.EnsureSuccessStatusCode();
-                    dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
-                    string tag = ((string)release_json.html_url).Split('/').Last();
-                    release.Version = Regex.Replace(tag.Replace("v", ""), "-r.*", "");
-                    release.DownloadURL = $"https://github.com/{repo}/releases/download/{tag}/chrome.nosync.7z";
-                    release.ChangelogURL = release_json.html_url;
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new NotSupportedException($"Chromium for macOS is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
-                    var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/macchrome/macstable/releases/latest");
-                    resp.EnsureSuccessStatusCode();
-                    dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
-                    string tag = ((string)release_json.html_url).Split('/').Last();
-                    release.Version = Regex.Replace(tag.Replace("v", ""), "-r.*", "");
-                    release.DownloadURL = $"https://github.com/macchrome/macstable/releases/download/{tag}/Chromium.app.ungoogled-{release.Version}.zip";
-                    release.ChangelogURL = release_json.html_url;
-                }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    if (RuntimeInformation.OSArchitecture != Architecture.X64) throw new NotSupportedException($"Chromium for Linux is not available for this platform ({Convert.ToString(RuntimeInformation.OSArchitecture)})"); // Only x86_64 builds exist as of now
-                    var resp = await CommonHTTP.Client.GetAsync($"https://api.github.com/repos/macchrome/linchrome/releases/latest");
-                    resp.EnsureSuccessStatusCode();
-                    dynamic release_json = JsonConvert.DeserializeObject(await resp.Content.ReadAsStringAsync());
-                    string tag = ((string)release_json.html_url).Split('/').Last();
-                    release.Version = Regex.Replace(tag.Replace("v", ""), "-r.*", "");
-                    release.ChangelogURL = release_json.html_url;
-                    foreach (var asset in release_json.assets)
-                    {
-                        if (((string)asset.name).EndsWith(".AppImage"))
+                        /* We've found the version that we need */
+                        foreach (dynamic download in versions[i].downloads.chrome)
                         {
-                            release.DownloadURL = asset.browser_download_url;
-                            break;
+                            if (download.platform == Chrome115ComboMap[OSCombo.Combo]) release.DownloadURL = download.url;
                         }
                     }
                 }
-                else throw new NotSupportedException("Chromium is not available for this operating system");
+
+
                 if (release.Update != 2 && !BrowserInst && Versioning.CompareVersion(release.Version, LocalVersion()) > 0) release.Update = 1;
                 return release;
             }
@@ -225,46 +222,91 @@ namespace HRngSelenium
 
                 /* Get ChromeDriver version */
                 string cdver = "";
-                if (major < 42) throw new NotSupportedException($"No information on ChromeDriver version for Chrome {version}");
-                else if (major < 70)
+                string download_url = "";
+                string changelog_url = "";
+                if (major < 115)
                 {
-                    /* TODO: Tidy up this mess */
-                    if (major >= 68) cdver = "2.42";
-                    else if (major >= 66) cdver = "2.40";
-                    else if (major >= 64) cdver = "2.37";
-                    else if (major >= 62) cdver = "2.35";
-                    else if (major >= 60) cdver = "2.33";
-                    else if (major >= 57) cdver = "2.28";
-                    else if (major >= 54) cdver = "2.25";
-                    else if (major >= 51) cdver = "2.22";
-                    else if (major >= 44) cdver = "2.19";
-                    else if (major >= 42) cdver = "2.15";
+                    /* Traditional checking method(s) */
+
+                    if (major < 42) throw new NotSupportedException($"No information on ChromeDriver version for Chrome {version}");
+                    else if (major < 70)
+                    {
+                        /* TODO: Tidy up this mess */
+                        if (major >= 68) cdver = "2.42";
+                        else if (major >= 66) cdver = "2.40";
+                        else if (major >= 64) cdver = "2.37";
+                        else if (major >= 62) cdver = "2.35";
+                        else if (major >= 60) cdver = "2.33";
+                        else if (major >= 57) cdver = "2.28";
+                        else if (major >= 54) cdver = "2.25";
+                        else if (major >= 51) cdver = "2.22";
+                        else if (major >= 44) cdver = "2.19";
+                        else if (major >= 42) cdver = "2.15";
+                    }
+                    else
+                    {
+                        /* Traditional method - check via chromedriver.storage.googleapis.com */
+                        var resp_ver = await CommonHTTP.Client.GetAsync($"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{major}.{minor}.{build}");
+                        resp_ver.EnsureSuccessStatusCode();
+                        cdver = (await resp_ver.Content.ReadAsStringAsync()).Trim();
+                    }
+
+                    Dictionary<string, string> combo_map = new Dictionary<string, string>
+                    {
+                        { "Windows.X86", "win32" },
+                        { "Windows.X64", "win32" }, // Strangely, Windows x64 binary does not exist :/
+                        { "Linux.X86", "linux32" },
+                        { "Linux.X64", "linux64" },
+                        { "OSX.X86", "mac32" },
+                        { "OSX.X64", "mac64" },
+                        { "OSX.Arm64", "mac64_m1" }
+                    };
+
+                    /* Set download and changelog URLs */
+                    download_url = $"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip";
+                    changelog_url = $"https://chromedriver.storage.googleapis.com/{cdver}/notes.txt";
                 }
                 else
                 {
-                    var resp_ver = await CommonHTTP.Client.GetAsync($"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{major}.{minor}.{build}");
+                    /* Check via Chrome for Testing dashboard */
+
+                    /* Get the dashboard's JSON API endpoint */
+                    var resp_dash = await CommonHTTP.Client.GetAsync("https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"); // Starting from Chrome 115, ChromeDriver is only available for known-good builds
+                    resp_dash.EnsureSuccessStatusCode();
+                    dynamic versions = ((dynamic)JsonConvert.DeserializeObject(await resp_dash.Content.ReadAsStringAsync())).versions;
+
+                    /* Get the latest (known good) Chrome/ChromeDriver release version */
+                    var resp_ver = await CommonHTTP.Client.GetAsync($"https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_{major}.{minor}.{build}");
                     resp_ver.EnsureSuccessStatusCode();
                     cdver = (await resp_ver.Content.ReadAsStringAsync()).Trim();
+
+                    /* Get the build's entry in the dashboard if it exists and extract information from that */
+                    foreach (dynamic entry in versions)
+                    {
+                        if (entry.version == cdver)
+                        {
+                            /* We've found the entry */
+                            foreach (dynamic download in entry.downloads.chromedriver)
+                            {
+                                if (download.platform == Chrome115ComboMap[OSCombo.Combo]) download_url = download.url;
+                            }
+                            // Starting from Chrome 115, ChromeDriver no longer ships changelogs
+
+                            break; // Nothing else to do
+                        }
+                    }
+
+                    if (download_url == "") throw new KeyNotFoundException($"Cannot find information on Chrome/Chromium {version}"); // Cannot get download URL, so we'll throw an exception and exit here
                 }
 
-                Dictionary<string, string> combo_map = new Dictionary<string, string>{
-                    { "Windows.X86", "win32" },
-                    { "Windows.X64", "win32" }, // Strangely, Windows x64 binary does not exist :/
-                    { "Linux.X86", "linux32" },
-                    { "Linux.X64", "linux64" },
-                    { "OSX.X86", "mac32" },
-                    { "OSX.X64", "mac64" },
-                    { "OSX.Arm64", "mac64_m1" }
-                };
-
                 /* Check if the request is successful, i.e. the file exists */
-                var resp = await CommonHTTP.Client.GetAsync($"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip");
+                var resp = await CommonHTTP.Client.GetAsync(download_url);
                 resp.EnsureSuccessStatusCode();
 
                 Release release = new Release();
                 release.Version = cdver;
-                release.DownloadURL = $"https://chromedriver.storage.googleapis.com/{cdver}/chromedriver_{combo_map[OSCombo.Combo]}.zip";
-                release.ChangelogURL = $"https://chromedriver.storage.googleapis.com/{cdver}/notes.txt";
+                release.DownloadURL = download_url;
+                release.ChangelogURL = changelog_url;
                 if (!File.Exists(DriverPath) || Versioning.CompareVersion(release.Version, LocalDriverVersion(), 2) != 0) release.Update = 2; // Force update if ChromeDriver does not exist or there's a version mismatch
 
                 return release;
@@ -300,55 +342,13 @@ namespace HRngSelenium
                         }
                     }
                     /* Download Chromium to replace old release */
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    if (await remote.Download(TempFile, cb))
                     {
-                        /* With Linux we'll be using AppImage which can actually extract itself */
-                        string appimg_file = Path.Combine(BaseDir.PlatformBase, "chromium.AppImage");
-                        if (await remote.Download(appimg_file, cb))
-                        {
-                            if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
-                            System.Diagnostics.Process process = new System.Diagnostics.Process();
-                            process.StartInfo.FileName = "chmod";
-                            process.StartInfo.Arguments = $"+x {appimg_file}";
-                            process.StartInfo.UseShellExecute = false;
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.StartInfo.CreateNoWindow = true;
-                            process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
-                            process = new System.Diagnostics.Process();
-                            process.StartInfo.FileName = appimg_file;
-                            process.StartInfo.WorkingDirectory = BaseDir.PlatformBase;
-                            process.StartInfo.Arguments = "--appimage-extract opt/google/chrome/*";
-                            process.StartInfo.UseShellExecute = false;
-                            process.StartInfo.RedirectStandardOutput = true;
-                            process.StartInfo.CreateNoWindow = true;
-                            process.Start(); await process.StandardOutput.ReadToEndAsync(); process.WaitForExit();
-                            Directory.Move(Path.Combine(new string[] { BaseDir.PlatformBase, "squashfs-root", "opt", "google", "chrome" }), Path.Combine(BaseDir.PlatformBase, "chrome"));
-                            Directory.Delete(Path.Combine(BaseDir.PlatformBase, "squashfs-root"), true);
-                            File.Delete(appimg_file);
-                        }
-                        else
-                        {
-                            if (File.Exists(appimg_file)) File.Delete(appimg_file);
-                            if (remote.Update == 2) return -1;
-                        }
+                        if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
+                        await SevenZip.Extract(TempFile, BaseDir.PlatformBase);
+                        Directory.Move(Path.Combine(BaseDir.PlatformBase, $"chrome-{Chrome115ComboMap[OSCombo.Combo]}"), Path.Combine(BaseDir.PlatformBase, "chrome")); // Rename extracted folder
                     }
-                    else
-                    {
-                        if (await remote.Download(TempFile, cb))
-                        {
-                            if (Directory.Exists(Path.Combine(BaseDir.PlatformBase, "chrome"))) Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Delete old release
-                            string[] files = new string[1]; // List of files to provide to 7za for extracting
-                            await SevenZip.Extract(TempFile, Path.Combine(BaseDir.PlatformBase, "chrome"), files);
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            {
-                                /* For Windows, the Chromium executable will be stored in Chrome-bin, and we need to pull that out */
-                                Directory.Move(Path.Combine(BaseDir.PlatformBase, "chrome", "Chrome-bin"), Path.Combine(BaseDir.PlatformBase, "Chrome-bin")); // Move Chrome-bin directory out
-                                Directory.Delete(Path.Combine(BaseDir.PlatformBase, "chrome"), true); // Remove old chrome directory
-                                Directory.Move(Path.Combine(BaseDir.PlatformBase, "Chrome-bin"), Path.Combine(BaseDir.PlatformBase, "chrome")); // Rename Chrome-bin to chrome
-                            }
-                        }
-                        else if (remote.Update == 2) return -1;
-                    }
+                    else if (remote.Update == 2) return -1;
                 }
             }
 
@@ -360,6 +360,15 @@ namespace HRngSelenium
                 {
                     if (File.Exists(DriverPath)) File.Delete(DriverPath); // Delete old ChromeDriver
                     await SevenZip.Extract(TempFile, BaseDir.PlatformBase); // Extract temporary file
+
+                    /* Starting from ChromeDriver 115, the binary is inside a folder, so we'll need to move the folder's contents to its parent too */
+                    if (Versioning.GetMajVersion(driver.Version) >= 115)
+                    {
+                        string dir = Path.Combine(BaseDir.PlatformBase, $"chromedriver-{Chrome115ComboMap[OSCombo.Combo]}");
+                        Directory.Move(Path.Combine(dir, Path.GetFileName(DriverPath)), DriverPath);
+                        Directory.Move(Path.Combine(dir, "LICENSE.chromedriver"), Path.Combine(BaseDir.PlatformBase, "LICENSE.chromedriver")); // Probably needed too
+                        Directory.Delete(dir, true);
+                    }
                 }
                 else if (driver.Update == 2) return -1;
             }
