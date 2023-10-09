@@ -167,7 +167,7 @@ namespace HRngSelenium
                 List<(string version, int minver, int maxver)> gd_versions = new List<(string version, int minver, int maxver)>();
                 for (int line = 0; line < support_md.Length; line++) // TODO: Optimize
                 {
-                    if (support_md[line] == " <tr>")
+                    if (support_md[line] == " <tr>" && line < support_md.Length - 1 && support_md[line + 1] != " <tr>")
                     {
                         /* Version list item */
                         gd_versions.Add((support_md[line + 1].Replace("  <td>", ""),
