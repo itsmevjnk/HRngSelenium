@@ -22,7 +22,7 @@ namespace HRngSelenium
         /// <returns><c>true</c> if there's a logged in account, or <c>false</c> otherwise.</returns>
         public static bool VerifyLogin(IWebDriver driver)
         {
-            driver.Navigate().GoToUrl("https://m.facebook.com");
+            driver.Navigate().GoToUrl("https://m.facebook.com/home.php");
 
             try
             {
@@ -171,7 +171,7 @@ namespace HRngSelenium
             else
             {
                 /* Enter and submit OTP */
-                while (driver.Url == "https://m.facebook.com/login/checkpoint/")
+                while (driver.Url.StartsWith("https://m.facebook.com/login/checkpoint/") || driver.Url.StartsWith("https://m.facebook.com/checkpoint/"))
                 {
                     try
                     {
@@ -186,7 +186,7 @@ namespace HRngSelenium
                 }
 
                 /* Possible case where Facebook prompts whether to remember browser */
-                if (driver.Url == "https://m.facebook.com/login/checkpoint/")
+                if (driver.Url.StartsWith("https://m.facebook.com/login/checkpoint/") || driver.Url.StartsWith("https://m.facebook.com/checkpoint/"))
                 {
                     try
                     {

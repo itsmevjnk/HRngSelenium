@@ -194,7 +194,7 @@ namespace HRngSelenium
 
             for (int pn = 0; pn < (int)npass; pn++, pass++) {
                 /* Get post page */
-                Driver.Navigate().GoToUrl((IsGroupPost) ? $"https://m.facebook.com/{PostID}" : $"https://m.facebook.com/story.php?story_fbid={PostID}&id={AuthorID}");
+                Driver.Navigate().GoToUrl($"https://m.facebook.com/story.php?story_fbid={PostID}&id={AuthorID}");
 
                 Dictionary<string, string> cookies = null;
                 if (pass == 2) {
