@@ -359,6 +359,7 @@ namespace HRngSelenium
                 if (await driver.Download(TempFile, cb))
                 {
                     if (File.Exists(DriverPath)) File.Delete(DriverPath); // Delete old ChromeDriver
+                    if (File.Exists(Path.Combine(BaseDir.PlatformBase, "LICENSE.chromedriver"))) File.Delete(Path.Combine(BaseDir.PlatformBase, "LICENSE.chromedriver")); // Delete old ChromeDriver license file
                     await SevenZip.Extract(TempFile, BaseDir.PlatformBase); // Extract temporary file
 
                     /* Starting from ChromeDriver 115, the binary is inside a folder, so we'll need to move the folder's contents to its parent too */
